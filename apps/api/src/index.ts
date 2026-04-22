@@ -1,8 +1,23 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { config as loadEnv } from "dotenv";
 import { buildApp } from "./app.js";
+
+const monorepoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../..",
+);
+loadEnv({ path: path.join(monorepoRoot, ".env") });
 
 const port = Number(process.env["PORT"] ?? 3000);
 const host = process.env["HOST"] ?? "0.0.0.0";
+const logLevel = process.env["LOG_LEVEL"] ?? "info";
+const isQuiet = ["warn", "error", "fatal", "silent"].includes(logLevel);
 
 const app = buildApp();
 await app.listen({ port, host });
-app.log.info(`Memories API listening on ${host}:${port}`);
+if (isQuiet) {
+  console.log(`Memories API http://127.0.0.1:${port}`);
+} else {
+  app.log.info(`Memories API listening on ${host}:${port}`);
+}

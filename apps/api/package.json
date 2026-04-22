@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "cross-env LOG_LEVEL=warn tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
@@ -12,10 +12,12 @@
   },
   "dependencies": {
     "@memories/shared": "file:../../packages/shared",
+    "dotenv": "^16.4.0",
     "fastify": "^5.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "cross-env": "^7.0.3",
     "tsx": "^4.0.0",
     "typescript": "~5.9.0",
     "vitest": "^3.0.0"

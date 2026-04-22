@@ -7,7 +7,7 @@
 | **Status** | draft |
 | **Last updated** | 2026-04-22 |
 | **Service** | Memories (photos, voice, transcription) |
-| **Related** | Fill from `docs/templates/` as PRD and technical design are written |
+| **Related** | [product-requirements.md](product-requirements.md) (draft v0.6; see [memories-user-workflow.md](memories-user-workflow.md)); [Prototype Backend Engineering Handoff.md](Prototype%20Backend%20Engineering%20Handoff.md); technical design TBD |
 
 ## Locked decisions (this repo)
 

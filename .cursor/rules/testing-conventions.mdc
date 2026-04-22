@@ -1,0 +1,12 @@
+# Testing Conventions Rule
+
+- Use co-located tests by default (place test files next to the source under `src`).
+- Naming:
+  - `*.test.ts` / `*.test.tsx` for unit/component tests
+  - `*.integration.test.ts` for integration tests
+  - `*.e2e.test.ts` for E2E tests when present
+- Cross-module integration scenarios may use `src/<domain>/__tests__/` within that workspace/domain.
+- Do not require one test file per source file; small entrypoints/wiring may be covered indirectly or excluded intentionally in test config.
+- Any changed behavior should update/add nearby tests.
+- Bug fixes must include a regression test (fail before, pass after).
+- Frontend changes that impact mobile UX (responsive layout, touch targets, dialogs, keyboard/focus paths, or mobile navigation) should include Playwright mobile coverage and run on both Android and iPhone emulation projects.

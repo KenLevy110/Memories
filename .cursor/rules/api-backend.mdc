@@ -1,0 +1,14 @@
+---
+description: Backend API workspace conventions for Node/TypeScript changes
+globs: apps/api/**/*.ts
+alwaysApply: false
+---
+
+# API Backend Rule
+
+- Keep API/domain logic in `apps/api`; avoid coupling to `apps/web`.
+- Enforce authz checks on protected operations and preserve security boundaries.
+- Prefer deterministic unit/integration tests for changed behavior.
+- For bug fixes, include a regression test that fails before and passes after.
+- Keep shared schemas/types in `packages/shared` when consumed by multiple apps.
+- Do not relax coverage gates without explicit owner + expiry in PR notes.

@@ -1,0 +1,20 @@
+{
+  "name": "memories",
+  "private": true,
+  "description": "Memories monorepo: record memories (photos, voice) with server-side transcription",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace=@memories/web",
+    "dev:api": "npm run dev --workspace=@memories/api",
+    "build": "npm run build --workspaces",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

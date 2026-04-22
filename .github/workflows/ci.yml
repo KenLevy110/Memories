@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+        continue-on-error: true
+
+      - name: Run checks when package.json exists
+        shell: bash
+        run: |
+          if [ -f package.json ]; then
+            npm ci
+            npm run lint --if-present
+            npm run typecheck --if-present
+            npm test --if-present
+          else
+            echo "No package.json at repo root; skipping Node checks."
+          fi
+

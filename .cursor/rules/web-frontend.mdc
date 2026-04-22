@@ -1,0 +1,14 @@
+---
+description: Frontend web workspace conventions for React/Vitest work
+globs: apps/web/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Web Frontend Rule
+
+- Keep browser-only code in `apps/web`; do not import server-only modules.
+- Use accessible-first UI patterns and test user-visible behavior.
+- Prefer `Vitest` + Testing Library queries by role/name over brittle selectors.
+- When changing UI behavior, update/add tests in `apps/web/src/**/*.test.tsx?`.
+- Keep shared contracts/types in `packages/shared` instead of duplicating.
+- Run `npm run ci:test:full` before finalizing cross-workspace changes.

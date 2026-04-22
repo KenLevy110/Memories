@@ -1,0 +1,28 @@
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Editor / OS
+*.swp
+*.tmp
+*~
+
+# Secrets (add patterns as you add env files)
+.env
+.env.*
+!.env.example
+
+# Build and tooling
+node_modules/
+dist/
+coverage/
+.turbo/
+
+# Test outputs
+playwright-report/
+test-results/
+
+# OneDrive sync noise (optional)
+*- conflict *
+

@@ -1,0 +1,12 @@
+---
+description: Core repo-wide standards and quality gates
+alwaysApply: true
+---
+
+# Repo Core Rule
+
+- Follow repository-wide guidance in `AGENTS.md`.
+- Respect project boundaries and avoid cross-cutting changes unless requested.
+- Preserve testing and coverage gates; do not bypass CI checks.
+- Bug fixes require regression tests (fail before, pass after).
+- If architecture/testing/release policy changes, sync relevant docs under `docs/`.

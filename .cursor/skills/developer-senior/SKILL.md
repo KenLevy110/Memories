@@ -10,7 +10,7 @@ instructions: Give specific, actionable feedback; defer deep domain rewrites to 
 
 Use for **reviewing implementation** produced under [developer-backend](../developer-backend/SKILL.md), [developer-database](../developer-database/SKILL.md), [developer-frontend-ui](../developer-frontend-ui/SKILL.md), and [developer-frontend-data-sync](../developer-frontend-data-sync/SKILL.md). For **whether the technical spec and stack fit the product** and **engineering coordination**, use [developer-manager](../developer-manager/SKILL.md).
 
-Anchor reviews to `docs/product-requirements.md`, `docs/technical-design.md`, and `docs/tech-stack.md` so behavior matches intent.
+Anchor reviews to `docs/product-requirements-v1.md`, `docs/technical-design-v1.md`, and `docs/tech-stack.md` so behavior matches intent.
 
 ## Backend review (API / server)
 

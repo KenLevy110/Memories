@@ -37,7 +37,7 @@ Use for **presentation, routing, accessibility, forms, and UI tests**. Stack aut
    - Surface validation errors **next to fields**.
 
 3. **Toasts**
-   - Single app-wide provider; **at most 4 visible** with a **queue** for overflow (see [design-wireframe.md](../../../docs/design-wireframe.md) — toast stack / design risks).
+   - Single app-wide provider; **at most 4 visible** with a **queue** for overflow (see [design-wireframe-v1.md](../../../docs/design-wireframe-v1.md) — toast stack / design risks).
    - No duplicate providers per route.
 
 4. **Routing**

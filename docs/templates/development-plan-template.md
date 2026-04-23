@@ -22,6 +22,9 @@
 | Technical design              | [technical-design.md](technical-design.md) v0.24         |
 | Tech stack                    | [tech-stack.md](tech-stack.md) v1.16                      |
 | Execution status (living log) | [status.md](status.md)                                   |
+| Implementation log            | [implementation-log.md](implementation-log.md)           |
+| Runbook                       | [runbook.md](runbook.md)                                 |
+| ADR index                     | [adr/README.md](adr/README.md)                           |
 | This plan (canonical path)    | [development-plan.md](development-plan.md)               |
 | PRD skill (IDs / structure)   | `.cursor/skills/product-manager/`                        |
 | Development-planner skill (authoring) | `.cursor/skills/development-planner/`            |
@@ -168,6 +171,7 @@ Use as milestone acceptance checks; trace to [design-wireframe.md](design-wirefr
 | **T2** one-line recap: mode (Duplicate vs Sync) + invitee count before Send invites                                       | Wireframe *Implementation alignment* / backlog P2 | **P1** timebox in **M4**; if slipped, tracked issue + owner |
 | **L1** staleness hint for open sync lists when SSE is off/delayed (e.g. "Updated while you were away" — copy in **W16**)  | Wireframe *Design risks* §4                       | **M7** (W16)                                                |
 | **Minimal toast** by **M2**: enough for **FR-L08** undo + errors; **full** 4-cap queue + **FR-S16** rules with **W17**    | §8.1 sequencing                                   | **M2** vs **M6**                                            |
+| **Implementation traceability gate:** implementation log updated; ADR created/updated when decisions are architectural/security/contract-level; runbook updated when operator behavior changes | Docs governance + AGENTS                           | Required before milestone close                             |
 
 
 ## 8. Sequencing & milestones

@@ -5,7 +5,7 @@
 | Field | Value |
 | --- | --- |
 | **Purpose** | Single place for **capture → save → list** flow: screenshots, flow diagram, and low-fi layout notes. |
-| **Used by** | [product-requirements.md](product-requirements.md), future `technical-design.md`, design/wireframe work |
+| **Used by** | [product-requirements-v1.md](product-requirements-v1.md), [technical-design-v1.md](technical-design-v1.md), [design-wireframe-v1.md](design-wireframe-v1.md) |
 | **Screenshots** | `docs/assets/workflow-screenshots/*.png` (7 steps, committed to repo) |
 | **Last updated** | 2026-04-22 |
 
@@ -152,7 +152,7 @@ Use for quick reviews when PNGs are not open. Boxes = major regions, not pixel-a
 ## Next steps for you
 
 1. **Commit** `docs/assets/workflow-screenshots/*.png` and this file with git.  
-2. **Technical design:** add a section that links here and maps each step to routes, API calls, and state machines.  
-3. **Wireframes:** treat this doc as **reference hi-fi**; use ASCII above or designer-wireframe skill for empty/loading/error states not shown in screenshots.
+2. **Technical design:** **[technical-design-v1.md](technical-design-v1.md)** Section 3 (step → route → API).  
+3. **Wireframes:** supplementary states in **[design-wireframe-v1.md](design-wireframe-v1.md)**; this doc stays the **hi-fi** reference.
 
-You do **not** need to re-save screenshots elsewhere if they live under `docs/assets/workflow-screenshots/` as committed files (already copied from Cursor’s asset cache into the repo).
+You do **not** need to re-save screenshots elsewhere if they live under `docs/assets/workflow-screenshots/` as committed files.

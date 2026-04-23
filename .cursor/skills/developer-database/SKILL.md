@@ -1,7 +1,7 @@
 ---
 name: developer-database
 description: Designs and maintains PostgreSQL data layer for this repo with Drizzle ORM or Prisma, migrations, foreign keys, constraints, indexes, and transactional integrity. Use when changing schema, queries, data consistency, or migration strategy.
-instructions: Keep schema and migration decisions aligned with docs/tech-stack.md and docs/technical-design.md.
+instructions: Keep schema and migration decisions aligned with docs/tech-stack.md and docs/technical-design-v1.md.
 ---
 
 # Developer Database

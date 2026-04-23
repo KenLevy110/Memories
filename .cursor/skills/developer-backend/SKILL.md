@@ -1,7 +1,7 @@
 ---
 name: developer-backend
 description: Implements and reviews backend API work for this repo using Node.js, TypeScript, Fastify or Hono, REST mutations, SSE fan-out, Zod validation, and pino logging with request_id. Use when building endpoints, auth, authorization, transactions, and realtime server behavior.
-instructions: Keep backend changes aligned with docs/tech-stack.md and docs/technical-design.md.
+instructions: Keep backend changes aligned with docs/tech-stack.md and docs/technical-design-v1.md.
 ---
 
 # Developer Backend

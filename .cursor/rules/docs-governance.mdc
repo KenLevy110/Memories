@@ -10,8 +10,9 @@ alwaysApply: false
 - New docs should include a `Template used` field in document control (or equivalent metadata) that references the template path.
 - Keep `docs/tech-stack.md` concise; place deep policy detail in design/plan docs.
 - If behavior, architecture, testing policy, or release gates change, update:
-  - `docs/product-requirements.md`
-  - `docs/technical-design.md`
+  - `docs/product-requirements-v1.md`
+  - `docs/technical-design-v1.md`
+  - `docs/design-wireframe-v1.md` (when UI flows or states change)
   - `docs/development-plan.md`
   - `docs/tech-stack.md` summary references
 - Maintain consistent naming for skills, packages, and workspace paths.

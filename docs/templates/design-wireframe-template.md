@@ -11,6 +11,9 @@
 | PRD | [product-requirements.md](product-requirements.md) v0.28 |
 | TDD | [technical-design.md](technical-design.md) v0.24 |
 | Dev plan | [development-plan.md](development-plan.md) v1.13 |
+| Implementation log | [implementation-log.md](implementation-log.md) |
+| Runbook | [runbook.md](runbook.md) |
+| ADR index | [adr/README.md](adr/README.md) |
 | v1.1 PRD (invite email) | [product-requirements-v1.1.md](product-requirements-v1.1.md) **FR-V11-S01** |
 | Fidelity | Annotated low-fi |
 

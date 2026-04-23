@@ -7,7 +7,7 @@
 | **Status** | draft |
 | **Last updated** | 2026-04-22 |
 | **Service** | Memories (photos, voice, transcription) |
-| **Related** | [product-requirements.md](product-requirements.md) (draft v0.6; see [memories-user-workflow.md](memories-user-workflow.md)); [Prototype Backend Engineering Handoff.md](Prototype%20Backend%20Engineering%20Handoff.md); technical design TBD |
+| **Related** | [product-requirements-v1.md](product-requirements-v1.md); [technical-design-v1.md](technical-design-v1.md); [design-wireframe-v1.md](design-wireframe-v1.md); [memories-user-workflow-v1.md](memories-user-workflow-v1.md); [Prototype Backend Engineering Handoff.md](Prototype%20Backend%20Engineering%20Handoff.md) |
 
 ## Locked decisions (this repo)
 

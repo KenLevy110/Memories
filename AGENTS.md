@@ -37,8 +37,10 @@ Run relevant tests after changes and before marking work complete. Keep CI green
 
 If behavior, architecture, testing policy, or release gates change, update the corresponding material in `docs/`, for example:
 
-- `docs/product-requirements.md`
-- `docs/technical-design.md`
+- `docs/product-requirements-v1.md`
+- `docs/technical-design-v1.md`
+- `docs/design-wireframe-v1.md`
+- `docs/memories-user-workflow-v1.md`
 - `docs/development-plan.md`
 - `docs/tech-stack.md`
 

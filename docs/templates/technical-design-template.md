@@ -11,7 +11,7 @@
 | **Version** | 0.25 |
 | **Last updated** | 2026-04-22 |
 | **Related PRD** | [product-requirements.md](product-requirements.md) v0.28 |
-| **Related docs** | [tech-stack.md](tech-stack.md) v1.19; [design-wireframe.md](design-wireframe.md) v0.50; [development-plan.md](development-plan.md) v1.15; [status.md](status.md); **v1.1 delta:** [technical-design-v1.1.md](technical-design-v1.1.md) (**invite email §9A**); full PRD (planned) |
+| **Related docs** | [tech-stack.md](tech-stack.md) v1.19; [design-wireframe.md](design-wireframe.md) v0.50; [development-plan.md](development-plan.md) v1.15; [implementation-log.md](implementation-log.md); [runbook.md](runbook.md); [adr/README.md](adr/README.md); [status.md](status.md); **v1.1 delta:** [technical-design-v1.1.md](technical-design-v1.1.md) (**invite email §9A**); full PRD (planned) |
 
 ---
 

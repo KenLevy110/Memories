@@ -6,7 +6,7 @@
 | Field   | Value                           |
 | ------- | ------------------------------- |
 | Title   | List web app — development plan |
-| Version | 1.15                            |
+| Version | 1.16                            |
 | Author  | Ken Levy                        |
 | Date    | 2026-04-22                      |
 | Status  | Draft                           |
@@ -40,7 +40,14 @@
 | QA skill                      | `.cursor/skills/developer-quality-assurance/`            |
 | Testing execution skill       | `.cursor/skills/developer-testing/`                      |
 | Senior review skill           | `.cursor/skills/developer-senior/`                       |
+| Structural / readability (pre-review) | `.cursor/skills/developer-code-quality/`          |
 
+
+## 2.1 AI-first delivery assumptions
+
+- This repository uses an AI-first delivery model: AI agents are expected to design, implement, review, and maintain code by default.
+- Difficulty and effort sizing in this plan should assume AI-assisted execution by default.
+- If a task requires materially higher human-only effort assumptions, explicitly document the reason in the relevant section.
 
 ## 3. Executive summary
 
@@ -236,6 +243,7 @@ Use as milestone acceptance checks; trace to [design-wireframe.md](design-wirefr
 | **PR gate**         | **CI** (`.github/workflows/ci.yml`): `npm run lint`, `npm run typecheck`, `npm run db:migrate -w @lists/api`, `npm run ci:test:full`, Playwright **Chromium** (`npm run test:e2e:ci -w @lists/web`) plus Playwright mobile smoke (`npm run test:e2e:mobile:smoke -w @lists/web`); changed behavior has at least one automated test where practical |
 | **Merge-to-main**   | Same as PR gate on `main`; full integration suite plus Playwright regression pack (§9.1). After the `ci` job succeeds, **`.github/workflows/ci.yml`** runs **`migrate-production`**: applies Drizzle migrations to the DB at **`DATABASE_URL_PRODUCTION`** (repo secret). Manual **Database migrations** workflow remains for staging or out-of-band runs (see `docs/infrastructure.md`). |
 | **Local fast loop** | Optional: `npm run ci:test:changed` — workspace tests **without** coverage (not a substitute for PR gate)                                                                                                                                                                                   |
+| **Structural pre-review** | Before requesting senior or peer review on non-trivial diffs, read `.cursor/skills/developer-code-quality/SKILL.md` and pass its checklist (nesting, duplication, naming). Complements CI and `developer-senior`; not a substitute. |
 | **Pre-release**     | Full Playwright regression; migration rehearsal; security checklist signed off; 0 open P0 defects                                                                                                                                                                                           |
 | **Go-live**         | Post-deploy smoke + telemetry (auth, invites, SSE health); rollback plan available                                                                                                                                                                                                          |
 
@@ -355,6 +363,7 @@ For **client work**, include the right skill(s) in the same message (e.g. `@.cur
 | Schema, migrations, constraints, indexes                                                                                                                                              | `@.cursor/skills/developer-database/SKILL.md`                            |
 | Sessions, cookies, CSRF/SameSite, admin/support routes                                                                                                                                | `@.cursor/skills/developer-security/SKILL.md`                            |
 | Running tests (background execution, polling, abort/hang handling, coverage)                                                                                                          | `@.cursor/skills/developer-testing/SKILL.md`                             |
+| Nested control flow, DRY, naming before review                                                                                                                                        | `@.cursor/skills/developer-code-quality/SKILL.md`                        |
 
 
 **Backend-heavy** prompts (2, 4, 8–10, server half of 12, 15): attach **developer-backend** and/or **developer-database** when implementing those layers (**§14.3** suggests when to add senior/QA review).
@@ -425,6 +434,8 @@ Use `**@.cursor/skills/developer-senior/SKILL.md`** for **implementation review*
 
 Use `**@.cursor/skills/developer-quality-assurance/SKILL.md`** for **risk-based test planning**, expanding or hardening Playwright/a11y coverage, and release-style smoke criteria—not only in prompt **13**.
 
+Use `**@.cursor/skills/developer-code-quality/SKILL.md`** for a **structural pass** (nesting, duplication, clear naming) on meaningful changes before requesting review; run before or alongside `developer-senior`, not instead of it. Release plans that include a **manual test matrix** may add a short closing note after that table: structural pre-review is complementary to hands-on scenarios, CI, and senior review (see **§9.2** **Structural pre-review** row).
+
 
 | After prompt(s)        | Suggested review                   | Why                                                                        |
 | ---------------------- | ---------------------------------- | -------------------------------------------------------------------------- |
@@ -449,6 +460,7 @@ Skipping reviews is fine on tiny chores; for anything touching **auth, shares, m
 
 | Ver  | Date       | Notes                                                                                                                                                                                                                                                                                                                             |
 | ---- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.16 | 2026-04-25 | **§2, §9.2, §14.1, §14.3:** Documented `developer-code-quality` (structural pre-review before senior/peer review) and optional closing note for plans with a manual test matrix.                                                                                                                                                  |
 | 1.15 | 2026-04-22 | **§9.1–§9.2:** PR gate now includes Playwright mobile smoke on Android + iPhone emulation (`mobile-chrome`, `mobile-safari`) in addition to Chromium desktop; CI artifact upload captures Playwright report for failures. |
 | 1.14 | 2026-04-18 | **§9.2** merge-to-main: CI job **`migrate-production`** applies migrations to production Postgres via **`DATABASE_URL_PRODUCTION`**; operator map in **`docs/infrastructure.md`**.                                                                                                                                 |
 | 1.13 | 2026-04-17 | **§2** linked inputs: wireframes **v0.50** (N1 vs **FR-V11-S01**), tech-stack **v1.15**. |

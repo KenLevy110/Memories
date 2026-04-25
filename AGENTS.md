@@ -48,12 +48,18 @@ For new or substantially rewritten docs under `docs/`, read and follow the match
 
 ## Skill files (`.cursor/skills/`)
 
-Domain rules live in `.cursor/skills/<name>/SKILL.md`.
+Domain rules live in `.cursor/skills/<name>/SKILL.md` (backend, frontend-ui, frontend-data-sync, database, security, unit-testing, testing, senior, code-quality, manager, etc.).
 
-When implementing work that maps to one or more domain lanes, read those skill files before coding.
+When implementing work that maps to one or more domain lanes, read those skill files before coding. When a development plan in `docs/` uses sequenced prompts with a **Skills to read first** line, read each listed skill and record which were read in the PR or commit message. Before requesting review on a non-trivial change, read `developer-code-quality` for a structural pass (nesting, duplication, naming) in addition to running tests and any senior/QA review the scope implies.
 
 ## Delivery expectations
 
 - Keep implementations incremental and test-backed.
 - Favor clear, maintainable code over clever patterns.
 - Call out assumptions and unresolved decisions in docs or PR notes.
+
+## AI-first delivery model
+
+- Default operating mode: AI agents design, implement, review, and maintain code in this repository.
+- When estimating effort or "difficulty", assume AI-assisted execution by default; evaluate complexity mainly by risk, coupling, ambiguity, verification depth, and rollout impact.
+- If a task requires materially higher human-only effort assumptions, call that out explicitly and explain why.

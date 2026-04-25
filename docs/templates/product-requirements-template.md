@@ -10,6 +10,12 @@
 | **Last updated** | 2026-04-22 |
 | **Related docs** | [technical-design.md](technical-design.md) v0.25; [development-plan.md](development-plan.md) v1.15; [implementation-log.md](implementation-log.md); [runbook.md](runbook.md); [adr/README.md](adr/README.md); [tech-stack.md](tech-stack.md) v1.19; [design-wireframe.md](design-wireframe.md) v0.50; **v1.1:** [product-requirements-v1.1.md](product-requirements-v1.1.md) (**invite email** — **FR-V11-S01**); full PRD (future); `.cursor/skills/product-manager/reference.md` |
 
+## AI-first delivery assumptions
+
+- This repository uses an AI-first delivery model: AI agents are expected to design, implement, review, and maintain code by default.
+- Scope, feasibility, and effort framing should assume AI-assisted execution by default.
+- If a requirement is expected to need materially higher human-only effort assumptions, call it out explicitly in Risks, Scope, or Open Questions.
+
 ---
 
 ## Who it’s for

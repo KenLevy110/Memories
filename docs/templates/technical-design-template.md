@@ -13,6 +13,12 @@
 | **Related PRD** | [product-requirements.md](product-requirements.md) v0.28 |
 | **Related docs** | [tech-stack.md](tech-stack.md) v1.19; [design-wireframe.md](design-wireframe.md) v0.50; [development-plan.md](development-plan.md) v1.15; [implementation-log.md](implementation-log.md); [runbook.md](runbook.md); [adr/README.md](adr/README.md); [status.md](status.md); **v1.1 delta:** [technical-design-v1.1.md](technical-design-v1.1.md) (**invite email §9A**); full PRD (planned) |
 
+## AI-first delivery assumptions
+
+- This repository uses an AI-first delivery model: AI agents are expected to design, implement, review, and maintain code by default.
+- Architecture trade-offs, implementation sequencing, and complexity discussion should assume AI-assisted execution by default.
+- If a design area is expected to require materially higher human-only effort assumptions, call it out explicitly in Risks or Open Questions.
+
 ---
 
 ## 1. Summary

@@ -24,7 +24,7 @@ Out of scope: authoring a full execution-plan document from PRD/wireframes/TDD i
 - Align **milestones and definitions of done** with tests, observability, and security expectations from `AGENTS.md` and project rules—without bypassing coverage or quality gates.
 - Surface **risks, assumptions, and dependencies** (external teams, envs, data, approvals) in a concise form suitable for stakeholders and standups.
 - Reduce thrash: prefer **single sources of truth** for scope (PRD, TDD, tickets) and flag when parallel tracks are diverging.
-- When sequencing work against **`docs/development-plan-v1.md` Section 12**, validation works like this:
+- When sequencing work against the active editioned development plan **Section 12** (e.g. **`docs/development-plan-v1.md`**; see **`docs/templates/development-plan-template.md`**), validation works like this:
   - **Session defaults:** Every implementation prompt implicitly requires **`developer-testing`** and **`developer-code-quality`** (Section 12 intro + **§12.1**)—do not insist those names appear on each **Skills to read first** line.
   - **Lean per-prompt lists:** **`Skills to read first`** names **lane** skills plus **conditional** extras per plan **§12.1** (security, senior on high‑risk merges, QA/manager where the ticket warrants). Flag omissions only when §6.2 **Owner lane** or trust boundaries imply a skill §12.1 would add (e.g. authz ticket missing **`developer-security`**).
   - Optionally add **`developer-senior`**, **`developer-unit-testing`**, or **`developer-testing`** on the prompt when the ticket reshapes risky contracts or harnesses—even if §12.1 could have been silent.

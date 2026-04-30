@@ -261,4 +261,5 @@ Automation cannot fully cover UX judgement, cross-account isolation, or flaky-ne
 | Version | Notes |
 | ------- | ----- |
 | 0.1     | Initial plan from template. |
+| 0.2     | Section 12: §12.2 per-ticket prompts, §12.3 standard commands, §12.5 manual matrix; optional **§5.x** under §5; Session defaults tie **§8** and **§12.5**; **§12.6** mobile standard when `apps/web` exists (see **`.cursor/skills/development-planner/SKILL.md`**). |
 | […]     | […]   |

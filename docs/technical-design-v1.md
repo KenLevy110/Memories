@@ -7,12 +7,12 @@
 | **Author** | Ken Levy |
 | **Engineering owner** | Ken Levy |
 | **Status** | Approved |
-| **Version** | 1.2 |
+| **Version** | 1.3 |
 | **Edition** | **v1** — filename `technical-design-v1.md` (use `-v2.md` etc. for major rewrites) |
 | **Last updated** | 2026-04-30 |
 | **Template used** | `docs/templates/technical-design-template.md` (structure); content scoped to Memories |
-| **Related PRD** | [product-requirements-v1.md](product-requirements-v1.md) v1.2 |
-| **Related docs** | [memories-user-workflow-v1.md](memories-user-workflow-v1.md); [design-wireframe-v1.md](design-wireframe-v1.md); [tech-stack.md](tech-stack.md); [implementation-log.md](implementation-log.md); [adr/README.md](adr/README.md); [ADR-20260430-memories-platform-boundary-auth-routing.md](adr/ADR-20260430-memories-platform-boundary-auth-routing.md); [Prototype Backend Engineering Handoff.md](Prototype%20Backend%20Engineering%20Handoff.md) |
+| **Related PRD** | [product-requirements-v1.md](product-requirements-v1.md) v1.3 |
+| **Related docs** | [memories-user-workflow-v1.md](memories-user-workflow-v1.md); [design-wireframe-v1.md](design-wireframe-v1.md); [development-plan-v1.md](development-plan-v1.md); [development-plan.md](development-plan.md) (pointer); [tech-stack.md](tech-stack.md); [implementation-log.md](implementation-log.md); [adr/README.md](adr/README.md); [ADR-20260430-memories-platform-boundary-auth-routing.md](adr/ADR-20260430-memories-platform-boundary-auth-routing.md); [Prototype Backend Engineering Handoff.md](Prototype%20Backend%20Engineering%20Handoff.md) |
 
 ---
 
@@ -115,7 +115,7 @@ Operational alerts should live beside the Memories service dashboards (infra pro
 - Latency anomaly detection on prompt path (`POST /api/v1/clients/:clientId/memories/suggest_prompt`) near the configured timeout.
 - Object storage signer failures surfaced as Sev2 until resolved—upload path is pilot-critical (**FR-014**).
 
-Escalations and paging policy stay with platform ops unless explicitly delegated—Memories publishes metric names + thresholds referenced from `development-plan.md` once published.
+Escalations and paging policy stay with platform ops unless explicitly delegated—Memories publishes metric names + thresholds referenced from **[development-plan-v1.md](development-plan-v1.md)** ([pointer](development-plan.md)).
 
 **Global chrome (all MC\*):** facilitator strip (“Facilitating for …”) from auth context + `clientId`; no PII in analytics payloads (**NFR-006**, handoff §10.3).
 
@@ -252,7 +252,7 @@ Enforcement: **application code** + tests; must match platform `ClientAccess` se
 
 Everything in Memories can be agent-implemented locally, yet **coordination artifacts still need anchors**:
 
-- Tie environment-specific unblockers (JWT claim schema, vendor creds, alert routing) to a **Decision owner** column inside `development-plan.md` once published.
+- Tie environment-specific unblockers (JWT claim schema, vendor creds, alert routing) to tickets or a **Decision owner** note inside **[development-plan-v1.md](development-plan-v1.md)** as the plan is maintained.
 - Use **delivery targets** (“complete by sprint X / week of …”) sparingly—only for contractual/legal gates (BAAs), cross-repo interfaces, or customer pilot commitments.
 
 ---
@@ -265,3 +265,4 @@ Everything in Memories can be agent-implemented locally, yet **coordination arti
 | 1.0 / file v1 | 2026-04-22 | Renamed to `technical-design-v1.md`; doc version 1.0 |
 | 1.1 | 2026-04-30 | Approved; locked routes, SoR split, JWT, poll, Drizzle, job queue, appendix matrix; ADR-20260430 |
 | 1.2 | 2026-04-30 | API addendum routes, alerting guidance, clarified transcript/tag MVP scope, JWT hardening checklist, observability responsibilities, appendix family note |
+| 1.3 | 2026-04-30 | Related docs + delivery coordination: links to **[development-plan-v1.md](development-plan-v1.md)** ([pointer](development-plan.md)); alerting text uses editioned plan |

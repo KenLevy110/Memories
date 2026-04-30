@@ -134,7 +134,7 @@ Each track should map to the `.cursor/skills/<name>/SKILL.md` files the implemen
 
 Quality gates:
 
-- Keep repo CI gates from `AGENTS.md` unchanged unless this plan documents an intentional policy change (then update `docs/development-plan.md`, `docs/tech-stack.md`, and related docs per governance).
+- Keep repo CI gates from `AGENTS.md` unchanged unless this plan documents an intentional policy change (then update the editioned **`docs/development-plan-v{N}.md`**, optional `docs/development-plan.md` pointer, `docs/tech-stack.md`, and related docs per governance).
 - Treat **`AGENTS.md` → Engineering quality pillars** as the summary bar: **coverage** (unit/component + gates), **secure software**, and **code-quality + senior + QA** layers per ticket reviewers and risk.
 - Add targeted regression tests for: [list themes tied to this release].
 - For web UI changes that affect layout, dialogs, or touch flows, include or extend Playwright coverage per repo rules (desktop plus mobile smoke where required).

@@ -16,7 +16,7 @@ Out of scope: authoring a full execution-plan document from PRD/wireframes/TDD i
 - Trace **requirements and design** to **technical design** and **stack choices**: every major requirement or user-facing behavior should map to an explicit design decision, API or data shape, and justified technology (see `docs/product-requirements-v1.md`, wireframes or design references, `docs/technical-design-v1.md`, `docs/tech-stack.md`).
 - Call out **gaps and mismatches** early: missing NFRs in the spec, stack limitations, unknown integration constraints, or design that is ambiguous for implementation.
 - Ensure **scope and phasing** in the technical plan match product priorities (MVP vs later), and that rollbacks, migrations, and feature flags are considered when the spec implies risk or partial rollout.
-- When architecture, testing policy, or release gates change, remind to keep **docs** in sync per repo guidance (`docs/product-requirements-v1.md`, `docs/technical-design-v1.md`, `docs/development-plan.md`, `docs/tech-stack.md`).
+- When architecture, testing policy, or release gates change, remind to keep **docs** in sync per repo guidance (`docs/product-requirements-v1.md`, `docs/technical-design-v1.md`, `docs/development-plan-v1.md`, optional `docs/development-plan.md` pointer, `docs/tech-stack.md`).
 
 ## Engineering coordination
 
@@ -32,4 +32,4 @@ Out of scope: authoring a full execution-plan document from PRD/wireframes/TDD i
 - Work is broken into **coherent increments** with clear interfaces between contributors.
 - Test, observability, and security work are **planned in the same slices** as features, not left as a final pass.
 - A short **status and risk log** is maintained for stakeholder updates.
-- Every `§12` implementation prompt in `docs/development-plan.md` has a `Skills to read first` line, and PRs record which skills were read before coding began.
+- Every **Section 12** implementation prompt in the active editioned plan (e.g. `docs/development-plan-v1.md`) has a **`Skills to read first`** line, and PRs record which skills were read before coding began.

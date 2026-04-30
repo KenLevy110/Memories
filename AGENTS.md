@@ -49,12 +49,10 @@ If behavior, architecture, testing policy, or release gates change, update the c
 - `docs/technical-design-v1.md`
 - `docs/design-wireframe-v1.md`
 - `docs/memories-user-workflow-v1.md`
-- `docs/development-plan.md`
+- `docs/development-plan-v1.md` (editioned plan; see also optional `docs/development-plan.md` pointer)
 - `docs/tech-stack.md`
 
-For new or substantially rewritten docs under `docs/`, read and follow the matching template in `docs/templates/` before drafting.
-
-Optional **filled-in samples** (not templates) for structure reference may live under `docs/examples/`; start new work from `docs/templates/`, not from copies of samples.
+For new or substantially rewritten docs under `docs/`, read and follow the matching template in `docs/templates/` before drafting. **Filled-in references** for Memories are the editioned `docs/*-v1.md` files (PRD, TDD, wireframes, development plan, workflow)—not a separate `docs/examples/` tree.
 
 **CI:** **`docs-smoke`** runs **`scripts/check-docs.sh`**; **`checks`** runs optional root **`npm`** scripts when `package.json` exists. The default **CI workflow does not run `db:migrate`** or touch PostgreSQL. **Manual migrations:** [`.github/workflows/migrate.yml`](.github/workflows/migrate.yml) (**workflow_dispatch**) once you have workspaces, `db:migrate`, and secrets—see **`docs/infrastructure.md`** (Database migrations). Optional automatic migrate on `main` is documented there but not enabled by default.
 

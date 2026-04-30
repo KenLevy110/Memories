@@ -13,7 +13,7 @@ alwaysApply: false
   - `docs/product-requirements-v1.md`
   - `docs/technical-design-v1.md`
   - `docs/design-wireframe-v1.md` (when UI flows or states change)
-  - `docs/development-plan.md`
+  - `docs/development-plan-v1.md` (editioned execution plan from `docs/templates/development-plan-template.md`; superseded editions stay linked under **Baseline / superseded plans**); optional **`docs/development-plan.md`** pointer document to the active edition only
   - `docs/tech-stack.md` summary references
 - Maintain consistent naming for skills, packages, and workspace paths.
 - Add a short revision-history note when materially changing policy.

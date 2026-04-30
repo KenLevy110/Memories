@@ -37,7 +37,9 @@ npm run dev:web
 
 `apps/web` reads `VITE_API_URL` (see `.env.example`) for display and future fetches to the API.
 
-`npm run db:prepare` is the standard local DB setup path on Windows: it provisions a local PostgreSQL dev cluster if needed, writes `DATABASE_URL` values to `.env`, and runs Drizzle migrations.
+`npm run db:prepare` is the standard local DB setup path on Windows: it provisions a local PostgreSQL dev cluster if needed, hardens it (`scram-sha-256`, localhost-only), preserves existing passworded DB URLs in `.env`, and runs Drizzle migrations.
+
+`db:dev:setup` intentionally normalizes local DB targets to this repo standard (`localhost:55432`, `memories`, `memories_test`) so different projects on your machine do not share the same database by accident.
 
 ## Scripts (root)
 
@@ -45,7 +47,7 @@ npm run dev:web
 | --- | --- |
 | `npm run dev:web` | Vite dev server for `apps/web` |
 | `npm run dev:api` | API with hot reload (`tsx watch`) |
-| `npm run db:dev:setup` | Provision/start local PostgreSQL dev cluster and write DB URLs to `.env` (Windows) |
+| `npm run db:dev:setup` | Provision/start hardened local PostgreSQL cluster and set DB URLs in `.env` when missing (Windows) |
 | `npm run db:migrate` | Apply Drizzle migrations for `@memories/api` |
 | `npm run db:prepare` | Run local DB setup then migrations (Windows standard flow) |
 | `npm run build` | Build all workspaces that define `build` |
@@ -59,7 +61,7 @@ npm run dev:web
 - `TEMPLATE_SYNC.md` explains staying aligned with `cursor-template` when you pull reusable changes.
 - Run `.\scripts\verify-template.ps1` after renames; use `-Strict` when cleaning placeholders (e.g. `@your-org` in `.github/CODEOWNERS`).
 - CI includes **`docs-smoke`** (`scripts/check-docs.sh`) plus **`checks`** (lint, typecheck, tests). In GitHub branch protection, require **`docs-smoke`** and **`checks`**, and the Security jobs you use (see `CONTRIBUTING.md`).
-- Optional DB migrates: `.github/workflows/migrate.yml` (manual dispatch); defaults and secrets are described in `docs/infrastructure.md` (section 3).
+- DB migrates: `.github/workflows/migrate.yml` supports manual production runs and optional auto-on-`main` mode controlled by `ENABLE_AUTO_PROD_MIGRATE`; see `docs/infrastructure.md` (section 3).
 - Git hooks (agent transcript archive): `git config core.hooksPath .githooks`. Set your Cursor transcript directory via `scripts/sync-agent-chats.local.env` (copy from `scripts/sync-agent-chats.local.env.example`) or `CURSOR_AGENT_TRANSCRIPTS_DIR`; see `docs/agent-chats/README.md`.
 
 ## License

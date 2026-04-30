@@ -1,39 +1,41 @@
-# Run database migrations against staging or production from GitHub Actions.
-# Trigger: Actions → "Database migrate" → Run workflow (workflow_dispatch only).
+# Run database migrations for production from GitHub Actions.
+# Triggers:
+# - Manual: Actions → "Database migrate" → Run workflow
+# - Automatic: push to main when ENABLE_AUTO_PROD_MIGRATE=true
 #
 # Prerequisites:
 # - Root package.json with workspaces and an API package that defines npm run db:migrate
-# - Repository secrets: DATABASE_URL_PRODUCTION (required for production target);
-#   DATABASE_URL_STAGING (required when target = staging)
+# - Repository secret: DATABASE_URL_PRODUCTION
 #
-# This template does not run migrations on push; that is intentional. After your app
-# is stable, you may add a push-to-main job here or chain migrate after CI—see docs/infrastructure.md §3.
+# Safety switch:
+# - Repository secret ENABLE_AUTO_PROD_MIGRATE must be exactly "true" for auto runs.
 
 name: Database migrate
 
 on:
   workflow_dispatch:
     inputs:
-      target:
-        description: Which database to migrate (selects the matching DATABASE_URL_* secret)
-        type: choice
-        required: true
-        default: production
-        options:
-          - production
-          - staging
       api_workspace:
         description: npm workspace name for the API (from that package's "name" field)
         type: string
         required: true
         default: "@memories/api"
+  push:
+    branches: [main]
+    paths:
+      - "apps/api/src/db/**"
+      - "apps/api/drizzle/**"
+      - "apps/api/drizzle.config.ts"
+      - "apps/api/package.json"
+      - ".github/workflows/migrate.yml"
 
 concurrency:
-  group: db-migrate-${{ inputs.target }}
+  group: db-migrate-production
   cancel-in-progress: false
 
 jobs:
-  migrate:
+  migrate-manual:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -66,18 +68,53 @@ jobs:
       - name: Run migrations
         shell: bash
         env:
-          TARGET: ${{ inputs.target }}
-          URL_PROD: ${{ secrets.DATABASE_URL_PRODUCTION }}
-          URL_STAGING: ${{ secrets.DATABASE_URL_STAGING }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PRODUCTION }}
           API_WORKSPACE: ${{ inputs.api_workspace }}
         run: |
-          if [ "$TARGET" = "staging" ]; then
-            export DATABASE_URL="$URL_STAGING"
-          else
-            export DATABASE_URL="$URL_PROD"
-          fi
           if [ -z "${DATABASE_URL:-}" ]; then
-            echo "Missing DATABASE_URL for target=$TARGET (set the matching repository secret)."
+            echo "Missing DATABASE_URL_PRODUCTION repository secret."
             exit 1
           fi
           npm run db:migrate -w "$API_WORKSPACE"
+
+  migrate-auto-production:
+    if: ${{ github.event_name == 'push' && secrets.ENABLE_AUTO_PROD_MIGRATE == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require root package.json
+        shell: bash
+        run: |
+          if [ ! -f package.json ]; then
+            echo "No root package.json — add a monorepo with db:migrate before using this workflow."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            echo "No package-lock.json — using npm install (add a lockfile for reproducible migrates)."
+            npm install
+          fi
+
+      - name: Run production migrations
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PRODUCTION }}
+        run: |
+          if [ -z "${DATABASE_URL:-}" ]; then
+            echo "Missing DATABASE_URL_PRODUCTION repository secret."
+            exit 1
+          fi
+          npm run db:migrate -w @memories/api

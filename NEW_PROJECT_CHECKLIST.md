@@ -1,6 +1,6 @@
 # New Project Checklist
 
-Use this checklist each time you create a project from `Memories`.
+Use this checklist when bootstrapping a new repo from Ohana `cursor-template`, or when validating this repo stays aligned with it.
 
 ## 1) Initialize project identity
 
@@ -31,9 +31,11 @@ Use this checklist each time you create a project from `Memories`.
 
 ## 5) Prepare delivery workflow
 
+- [ ] Run `git config core.hooksPath .githooks` and set `CURSOR_AGENT_TRANSCRIPTS_DIR` if needed (`docs/agent-chats/README.md`)
 - [ ] Configure CI checks for lint, tests, and build
 - [ ] Configure security checks in `.github/workflows/security.yml`
-- [ ] Require both CI and Security checks in branch protection
+- [ ] Require status checks: **`docs-smoke`**, **`checks`** (CI), and Security jobs you use (**`secrets-scan`**, **`npm-audit`**, PR-only **`dependency-review`**)
+- [ ] When PostgreSQL exists: add **`DATABASE_URL_PRODUCTION`** (and **`DATABASE_URL_STAGING`** if used), run **Actions → Database migrate** (`.github/workflows/migrate.yml`), then decide whether to enable automatic migrate on `main` per [`docs/infrastructure.md`](docs/infrastructure.md) §3
 - [ ] Add branch/PR conventions
 - [ ] Add release and rollback notes appropriate for project risk
 - [ ] Update `.github/CODEOWNERS` with real team handles

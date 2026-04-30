@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Repo Core Rule
 
-- Follow repository-wide guidance in `AGENTS.md`.
+- Follow repository-wide guidance in `AGENTS.md` (including human-owned branching and pull requests unless the user says otherwise).
 - Respect project boundaries and avoid cross-cutting changes unless requested.
 - Preserve testing and coverage gates; do not bypass CI checks.
 - Bug fixes require regression tests (fail before, pass after).

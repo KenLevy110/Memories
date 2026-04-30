@@ -1,12 +1,30 @@
 #!/bin/sh
+# Before each commit: sync agent transcripts (best-effort) and stage docs/agent-chats when updated.
+# Cross-platform: bash sync when available; otherwise PowerShell. See docs/agent-chats/README.md
 
-# Sync Cursor agent chat transcripts into the repo before each commit.
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "scripts/sync-agent-chats.ps1"
-status=$?
-if [ $status -ne 0 ]; then
-  echo "pre-commit: transcript sync failed"
-  exit $status
+set -eu
+
+REPO="$(git rev-parse --show-toplevel)"
+cd "$REPO" || exit 1
+
+if [ "${SKIP_AGENT_CHAT_SYNC:-}" = "1" ]; then
+  exit 0
 fi
 
-# Stage transcript updates automatically.
-git add docs/agent-chats
+if command -v bash >/dev/null 2>&1 && [ -f "$REPO/scripts/sync-agent-chats.sh" ]; then
+  bash "$REPO/scripts/sync-agent-chats.sh"
+elif command -v pwsh >/dev/null 2>&1; then
+  pwsh -NoProfile -File "$REPO/scripts/sync-agent-chats.ps1"
+elif command -v powershell.exe >/dev/null 2>&1; then
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$REPO/scripts/sync-agent-chats.ps1"
+else
+  echo "pre-commit: bash or PowerShell not found; skipping transcript sync" >&2
+  exit 0
+fi
+
+# Stage .jsonl / README updates under docs/agent-chats for this commit when present.
+if [ -n "$(git status --porcelain docs/agent-chats 2>/dev/null)" ]; then
+  git add docs/agent-chats
+fi
+
+exit 0

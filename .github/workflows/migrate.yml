@@ -1,0 +1,83 @@
+# Run database migrations against staging or production from GitHub Actions.
+# Trigger: Actions → "Database migrate" → Run workflow (workflow_dispatch only).
+#
+# Prerequisites:
+# - Root package.json with workspaces and an API package that defines npm run db:migrate
+# - Repository secrets: DATABASE_URL_PRODUCTION (required for production target);
+#   DATABASE_URL_STAGING (required when target = staging)
+#
+# This template does not run migrations on push; that is intentional. After your app
+# is stable, you may add a push-to-main job here or chain migrate after CI—see docs/infrastructure.md §3.
+
+name: Database migrate
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Which database to migrate (selects the matching DATABASE_URL_* secret)
+        type: choice
+        required: true
+        default: production
+        options:
+          - production
+          - staging
+      api_workspace:
+        description: npm workspace name for the API (from that package's "name" field)
+        type: string
+        required: true
+        default: "@memories/api"
+
+concurrency:
+  group: db-migrate-${{ inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require root package.json
+        shell: bash
+        run: |
+          if [ ! -f package.json ]; then
+            echo "No root package.json — add a monorepo with db:migrate before using this workflow."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            echo "No package-lock.json — using npm install (add a lockfile for reproducible migrates)."
+            npm install
+          fi
+
+      - name: Run migrations
+        shell: bash
+        env:
+          TARGET: ${{ inputs.target }}
+          URL_PROD: ${{ secrets.DATABASE_URL_PRODUCTION }}
+          URL_STAGING: ${{ secrets.DATABASE_URL_STAGING }}
+          API_WORKSPACE: ${{ inputs.api_workspace }}
+        run: |
+          if [ "$TARGET" = "staging" ]; then
+            export DATABASE_URL="$URL_STAGING"
+          else
+            export DATABASE_URL="$URL_PROD"
+          fi
+          if [ -z "${DATABASE_URL:-}" ]; then
+            echo "Missing DATABASE_URL for target=$TARGET (set the matching repository secret)."
+            exit 1
+          fi
+          npm run db:migrate -w "$API_WORKSPACE"

@@ -7,37 +7,38 @@
 - Status: Proposed
 - Owners: Engineering
 - Template used: `docs/templates/decision-log-template.md`
-- Related docs/issues/PRs: [technical-design-v1.md](../technical-design-v1.md), [product-requirements-v1.md](../product-requirements-v1.md), [tech-stack.md](../tech-stack.md)
+- Related docs/issues/PRs: `docs/product-requirements-v1.md`, `docs/technical-design-v1.md`, `docs/tech-stack.md`
 
 ## Context
 
-The repository is moving from scaffold state to implementation of the Memories vertical. The architecture must align with PRD and technical design goals while remaining simple and maintainable for iterative delivery.
+The project is moving from scaffold to implementation. The architecture should preserve clear boundaries between frontend, backend, and shared contracts to reduce maintenance overhead.
 
 ## Decision
 
 Use a monorepo architecture with three primary workspaces:
 
-1. `apps/web` for the user-facing React web client.
-2. `apps/api` for backend HTTP APIs and integration workflows.
-3. `packages/shared` for shared contracts, schemas, and reusable types.
+1. `apps/web` for user-facing frontend UI.
+2. `apps/api` for backend APIs and integrations.
+3. `packages/shared` for shared contracts, schemas, and utilities.
 
 ## Options considered
 
 1. Monorepo with web/api/shared packages (selected)
 2. Separate repositories per service and client
-3. Backend-only MVP with no dedicated shared package
+3. Backend-first MVP without a shared package
 
 ## Trade-offs
 
-- Benefits: Clear ownership boundaries with easy contract sharing and coordinated changes.
-- Risks: Requires discipline to avoid cross-workspace coupling and accidental dependency leakage.
-- Cost or complexity impact: Moderate setup complexity, lower long-term integration overhead.
+- Benefits: Faster contract alignment and simpler cross-layer changes.
+- Risks: Requires discipline to prevent workspace coupling.
+- Cost or complexity impact: Moderate setup complexity, lower integration friction.
 
 ## Consequences
 
-- New feature work should be scoped to the correct workspace and rely on `packages/shared` for cross-boundary contracts.
-- Design and requirements documents should keep route/API/schema references aligned with this layout.
+- New work should be scoped to the correct workspace.
+- Cross-service contracts should be defined in `packages/shared`.
+- Documentation should align route/API/schema decisions with this layout.
 
 ## Rollback / reversal plan
 
-If monorepo boundaries become a delivery bottleneck, split `apps/api` and `apps/web` into separate repositories while preserving `packages/shared` as a versioned package.
+If this layout becomes a delivery bottleneck, split workspaces into separate repositories and publish shared contracts as a versioned package.

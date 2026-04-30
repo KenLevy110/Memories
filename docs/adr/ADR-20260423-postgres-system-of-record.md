@@ -7,34 +7,34 @@
 - Status: Proposed
 - Owners: Engineering
 - Template used: `docs/templates/decision-log-template.md`
-- Related docs/issues/PRs: [tech-stack.md](../tech-stack.md), [technical-design-v1.md](../technical-design-v1.md), [product-requirements-v1.md](../product-requirements-v1.md)
+- Related docs/issues/PRs: `docs/tech-stack.md`, `docs/technical-design-v1.md`, `docs/product-requirements-v1.md`
 
 ## Context
 
-Memories requires transactional consistency across memory metadata, media references, transcript status, and access control boundaries. The datastore must support relational integrity, indexing, and operational maturity for sensitive data.
+Most template-based products need transactional consistency across core entities, access rules, and asynchronous processing state. The default datastore should favor relational integrity and operational maturity.
 
 ## Decision
 
-Adopt PostgreSQL as the primary system of record for core Memories domain entities and relationships.
+Use PostgreSQL as the default system of record for core domain data.
 
 ## Options considered
 
 1. PostgreSQL relational model (selected)
-2. Document-first datastore for memory records
-3. Hybrid with external service as the primary source of truth
+2. Document-first datastore
+3. External service as primary source of truth with local cache
 
 ## Trade-offs
 
-- Benefits: Strong relational constraints, mature transaction semantics, and straightforward indexing strategies.
-- Risks: Schema migration discipline is required for iterative product changes.
-- Cost or complexity impact: Moderate upfront schema design and migration management.
+- Benefits: Strong constraints, mature transactions, robust indexing, broad tooling support.
+- Risks: Requires migration discipline and schema management.
+- Cost or complexity impact: Moderate upfront schema and migration investment.
 
 ## Consequences
 
-- Domain tables and relationships should be modeled explicitly (memories, media, transcripts, access controls).
-- Data integrity should be enforced through constraints and transactional writes.
-- Future scaling patterns should prioritize query/index tuning before changing datastore strategy.
+- Domain entities should be modeled with explicit relations and constraints.
+- Critical writes should be transactional.
+- Performance work should start with query/index tuning before datastore changes.
 
 ## Rollback / reversal plan
 
-If PostgreSQL no longer meets operational or product constraints, perform a staged dual-write migration to a new primary store and keep PostgreSQL read-only during transition until cutover is validated.
+If PostgreSQL no longer fits product or scale constraints, execute a staged migration with dual-write and validation before final cutover.

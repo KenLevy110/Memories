@@ -16,7 +16,7 @@
 | `EMAIL_OUTBOX_TICK_MS` | Optional; background retry cadence for **`email_outbox`** (default 30s in code — see `.env.example`) |
 | `AWS_REGION` | Required for `ses`; use standard AWS credential env vars (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, or instance/task role) |
 
-Staging should run at least one **real** delivery check (see [technical-design-v1.md](technical-design-v1.md) **§11.3** when that section exists — and email deliverability risk; operator checklist [development-plan.md](development-plan.md) §10 when present).
+Staging should run at least one **real** delivery check (see [technical-design.md](technical-design.md) v0.24 **§11.3** — paragraph after the environment gates table — and **§12** Email deliverability risk; operator checklist [development-plan.md](development-plan.md) §10).
 
 ---
 
@@ -50,7 +50,7 @@ Use a **dedicated subdomain** for mail (for example `mail.example.com` or `lists
 
 ## Related
 
-- [technical-design-v1.md](technical-design-v1.md) — session / transactional mail (when specified)
+- [technical-design.md](technical-design.md) — session / magic-link mail (MVP)
 - [technical-design-v1.1.md](technical-design-v1.1.md) **§9A** — invite email + outbox
 - [development-plan.md](development-plan.md) v1.13 §10 (rollout: Resend, DNS)
 - Root `Dockerfile` (API image) and `.github/workflows/migrate.yml` (database migrations)

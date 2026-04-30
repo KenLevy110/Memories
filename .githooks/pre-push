@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Run before push: sync agent transcripts, then require a clean docs/agent-chats tree.
+set -euo pipefail
+
+if [[ "${SKIP_AGENT_CHAT_SYNC:-}" == "1" ]]; then
+  exit 0
+fi
+
+REPO="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [[ -z "$REPO" ]]; then
+  exit 0
+fi
+
+cd "$REPO"
+
+if [[ -f "$REPO/scripts/sync-agent-chats.sh" ]]; then
+  bash "$REPO/scripts/sync-agent-chats.sh"
+fi
+
+if [[ -n "$(git status --porcelain docs/agent-chats 2>/dev/null)" ]]; then
+  echo ""
+  echo "pre-push: docs/agent-chats has uncommitted changes after transcript sync."
+  echo "Review for sensitive data, then:"
+  echo "  git add docs/agent-chats && git commit -m \"chore: sync agent chat transcripts\""
+  echo "Or bypass (emergency only): SKIP_AGENT_CHAT_SYNC=1 git push"
+  echo ""
+  exit 1
+fi
+
+exit 0

@@ -1,13 +1,48 @@
 param(
-    [string]$SourceDir = "C:\Users\Ken Levy\.cursor\projects\c-Users-Ken-Levy-OneDrive-Documents-Business-Ohana-Memories\agent-transcripts",
+    [switch]$Strict,
+    [string]$SourceDir = "",
     [string]$DestinationDir = "docs\agent-chats"
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+$ScriptDir = $PSScriptRoot
+$LocalEnv = Join-Path $ScriptDir "sync-agent-chats.local.env"
+if (Test-Path -Path $LocalEnv) {
+    Get-Content -Path $LocalEnv | ForEach-Object {
+        $line = $_.Trim()
+        if ($line -match '^\s*#' -or $line -eq "") { return }
+        if ($line -match '^([^\s=]+)\s*=\s*(.*)$') {
+            $key = $matches[1].Trim()
+            $val = $matches[2].Trim().Trim('"')
+            Set-Item -Path "Env:$key" -Value $val
+        }
+    }
+}
+
+if (-not $SourceDir) {
+    if ($env:CURSOR_AGENT_TRANSCRIPTS_DIR) {
+        $SourceDir = $env:CURSOR_AGENT_TRANSCRIPTS_DIR
+    }
+}
+
+if (-not $SourceDir) {
+    $msg = "Set CURSOR_AGENT_TRANSCRIPTS_DIR or copy scripts/sync-agent-chats.local.env.example to scripts/sync-agent-chats.local.env"
+    if ($Strict) {
+        throw $msg
+    }
+    Write-Warning "sync-agent-chats: $msg. Skipping."
+    exit 0
+}
+
 if (!(Test-Path -Path $SourceDir -PathType Container)) {
-    throw "Source transcript directory not found: $SourceDir"
+    $msg = "Source transcript directory not found: $SourceDir (check CURSOR_AGENT_TRANSCRIPTS_DIR or sync-agent-chats.local.env)"
+    if ($Strict) {
+        throw $msg
+    }
+    Write-Warning $msg
+    exit 0
 }
 
 if (!(Test-Path -Path $DestinationDir -PathType Container)) {

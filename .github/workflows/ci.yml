@@ -1,3 +1,6 @@
+# Runs on every push to main and on pull requests.
+# Jobs: docs-smoke (templates + governance layout), checks (optional root npm when package.json exists).
+# This workflow does NOT run database migrations or deploy—add a separate workflow when you have an API workspace.
 name: CI
 
 on:
@@ -6,6 +9,14 @@ on:
     branches: [main]
 
 jobs:
+  docs-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Documentation layout smoke check
+        shell: bash
+        run: bash scripts/check-docs.sh
+
   checks:
     runs-on: ubuntu-latest
     steps:

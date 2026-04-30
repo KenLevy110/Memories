@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import Fastify from "fastify";
 import { apiErrorSchema, healthResponseSchema } from "@memories/shared";
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
@@ -16,6 +16,7 @@ const logLevel =
 
 const API_PREFIX = "/api/v1";
 const HEALTH_PATH = "/health";
+const CLIENT_SELF_ROLE = "CLIENT_SELF";
 
 type JwtAuthConfig = {
   issuer: string;
@@ -44,6 +45,170 @@ declare module "fastify" {
   interface FastifyRequest {
     auth: JWTPayload | null;
     request_id: string;
+  }
+}
+
+function readStringClaim(payload: JWTPayload, claimName: string): string | null {
+  const rawClaim = payload[claimName];
+  if (typeof rawClaim !== "string") {
+    return null;
+  }
+
+  const value = rawClaim.trim();
+  return value.length > 0 ? value : null;
+}
+
+function readStringArrayClaim(payload: JWTPayload, claimName: string): string[] {
+  const rawClaim = payload[claimName];
+  if (!Array.isArray(rawClaim)) {
+    return [];
+  }
+
+  return rawClaim
+    .filter((entry): entry is string => typeof entry === "string")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+}
+
+function readRoleSet(payload: JWTPayload): Set<string> {
+  const roleClaim = readStringClaim(payload, "role");
+  const roles = new Set<string>(
+    readStringArrayClaim(payload, "roles").map((role) => role.toUpperCase()),
+  );
+  if (roleClaim) {
+    roles.add(roleClaim.toUpperCase());
+  }
+  return roles;
+}
+
+function readClientScope(payload: JWTPayload): Set<string> {
+  const scope = new Set<string>();
+  const focalClientId = readStringClaim(payload, "client_id");
+  if (focalClientId) {
+    scope.add(focalClientId);
+  }
+
+  for (const clientId of readStringArrayClaim(payload, "client_ids")) {
+    scope.add(clientId);
+  }
+
+  return scope;
+}
+
+function hashActorId(userId: string | null): string | null {
+  if (!userId) {
+    return null;
+  }
+
+  return createHash("sha256").update(userId).digest("hex");
+}
+
+function getPathParam(
+  params: unknown,
+  paramName: "clientId" | "memoryId",
+): string | null {
+  if (!params || typeof params !== "object") {
+    return null;
+  }
+
+  const rawParam = (params as Record<string, unknown>)[paramName];
+  if (typeof rawParam !== "string") {
+    return null;
+  }
+
+  const value = rawParam.trim();
+  return value.length > 0 ? value : null;
+}
+
+function logAuthzDenied(
+  request: {
+    id: string;
+    method: string;
+    url: string;
+    auth: JWTPayload | null;
+    log: { warn: (payload: Record<string, unknown>, message: string) => void };
+  },
+  reason: string,
+  targetClientId: string | null,
+  memoryIdPresent: boolean,
+): void {
+  request.log.warn(
+    {
+      event: "authz_denied",
+      reason,
+      status_code: 403,
+      request_id: request.id,
+      method: request.method,
+      route: normalizePath(request.url),
+      target_client_id: targetClientId,
+      memory_id_present: memoryIdPresent,
+      actor_hash: hashActorId(
+        request.auth ? readStringClaim(request.auth, "user_id") : null,
+      ),
+    },
+    "Authorization denied.",
+  );
+}
+
+function enforceClientScopeAuthorization(request: {
+  id: string;
+  method: string;
+  url: string;
+  params: unknown;
+  auth: JWTPayload | null;
+  log: { warn: (payload: Record<string, unknown>, message: string) => void };
+}): void {
+  if (!request.auth) {
+    throw new HttpError(401, "UNAUTHORIZED", "Bearer token is required.");
+  }
+
+  const clientId = getPathParam(request.params, "clientId");
+  const memoryId = getPathParam(request.params, "memoryId");
+  if (!clientId && !memoryId) {
+    return;
+  }
+
+  if (memoryId && !clientId) {
+    logAuthzDenied(request, "memory_route_without_client_id", null, true);
+    throw new HttpError(
+      403,
+      "FORBIDDEN",
+      "Insufficient permissions for requested resource.",
+    );
+  }
+
+  const practiceId = readStringClaim(request.auth, "practice_id");
+  if (!practiceId) {
+    logAuthzDenied(request, "missing_practice_scope", clientId, Boolean(memoryId));
+    throw new HttpError(
+      403,
+      "FORBIDDEN",
+      "Insufficient permissions for requested resource.",
+    );
+  }
+
+  const clientScope = readClientScope(request.auth);
+  if (!clientId || clientScope.size === 0 || !clientScope.has(clientId)) {
+    logAuthzDenied(request, "client_scope_mismatch", clientId, Boolean(memoryId));
+    throw new HttpError(
+      403,
+      "FORBIDDEN",
+      "Insufficient permissions for requested resource.",
+    );
+  }
+
+  const roles = readRoleSet(request.auth);
+  const focalClientId = readStringClaim(request.auth, "client_id");
+  if (
+    roles.has(CLIENT_SELF_ROLE) &&
+    (!focalClientId || focalClientId !== clientId || clientScope.size !== 1)
+  ) {
+    logAuthzDenied(request, "client_self_scope_mismatch", clientId, Boolean(memoryId));
+    throw new HttpError(
+      403,
+      "FORBIDDEN",
+      "Insufficient permissions for requested resource.",
+    );
   }
 }
 
@@ -165,6 +330,15 @@ export function buildApp(options?: BuildAppOptions) {
     } catch {
       throw new HttpError(401, "UNAUTHORIZED", "Bearer token is invalid.");
     }
+  });
+
+  app.addHook("preHandler", async (request) => {
+    const path = normalizePath(request.url);
+    if (path === HEALTH_PATH || !path.startsWith(API_PREFIX)) {
+      return;
+    }
+
+    enforceClientScopeAuthorization(request);
   });
 
   app.setNotFoundHandler((request, reply) => {

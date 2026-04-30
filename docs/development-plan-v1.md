@@ -356,6 +356,8 @@ Bind `:clientId` and memory routes to JWT claims; emit structured denial logs wi
 
 **Verify:** Tests for cross-client access forbidden.
 
+DONE 2026-04-30
+
 ---
 
 #### Prompt T5 — Image upload sign endpoint
@@ -587,11 +589,21 @@ Workspaces use `**@memories/web`** and `**@memories/api**` (see root `package.js
 
 ### 12.5 Manual test execution matrix
 
+**How to use this matrix:** Rows are ordered **roughly** by dependency (API spine → signing → CRUD → web shell → capture → hardening). **Sign off** a row in the **Sign-off** column when its **Related tickets** are done and **Steps** pass in a suitable environment (local, staging, or ephemeral). **Stage 0.5** production still requires **every** **0.5** row below **and** the **T22** release checklist—not only the capture row. Rows without **T10**–**T12** may use **REST** or **curl** / API client plus seeded or synthetic JWTs; **T10**+ rows exercise the browser.
+
 
 | Epic      | Scenario                                 | Related tickets | Steps                                                                                             | Expected result                                   | Sign-off      |
 | --------- | ---------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------------- |
+| **0.5**   | Protected routes reject bad / missing JWT | T3             | Omit `Authorization` or send malformed token on a protected `/api/v1/…` route; call `/health` without auth | Protected routes rejected per contract; `/health` 200 | Manual / date |
+| **0.5**   | API `client_id` / memory authz (403)      | T4,T9          | Valid JWT; `GET` list or `GET` detail for another tenant’s `client_id` or unrelated `memory_id`    | **403**; error body has no PHI (**NFR-008**)       | Manual / date |
+| **0.5**   | Image + audio **upload** sign URLs       | T5,T6          | `POST` sign endpoints; exercise oversize / disallowed MIME where safe                               | Policy enforced; URLs usable only for intended upload | Manual / date |
+| **0.5**   | Finalize idempotency + **0.5** media caps | T8            | Same **Idempotency-Key** twice; attempt finalize with >1 image or >1 audio                         | Same `memory_id` on replay; **400** on cap breach  | Manual / date |
+| **0.5**   | List, detail, **PATCH**, soft **DELETE** | T9             | Cursor list, detail with media refs, allowed **PATCH**, **DELETE**                                | Contract + audit behavior per TDD; soft delete visible in list | Manual / date |
+| **0.5**   | Playback **sign-read**                   | T7,T9          | `POST` sign-read for allowed `mediaId`; repeat for media outside caller’s scope                   | Time-limited read URL for allowed; **403** for denied | Manual / date |
+| **0.5**   | Web list + detail + playback             | T10,T7,T9      | With test JWT: open list → detail → start playback (memory may be created via API or prior seed) | Playback works; empty/loading/error states sane  | Manual / date |
+| **0.5**   | Web cross-client isolation               | T4,T10         | As user A, open user B’s `client_id` route (deep link or tampered segment)                        | **403** or safe blocked UX; no other tenant data   | Manual / date |
+| **0.5**   | Ops smoke: `/health` + log spot-check     | T13            | `GET /health`; trigger sample traffic; inspect log fields                                         | **200**; structured logs; no PHI in payloads (**NFR-008**) | Manual / date |
 | **0.5**   | Guided capture saves one memory          | T11,T12,T14     | Complete photo → meta → record → save; airplane mode mid-save → resume                            | Exactly one DB row; playback works                | Manual / date |
-| **0.5**   | Authz isolation                          | T4,T10          | User A JWT cannot open User B client                                                              | 403 detail/list                                   | Manual / date |
 | **0.6**   | Multiple photos                          | T15             | Attach 3 images reorder                                                                           | Ordering persisted                                | Manual / date |
 | **0.7**   | Upload audio file                        | T16             | Pick file, save                                                                                   | Playback matches record path                      | Manual / date |
 | **0.8**   | Transcription                            | T17,T18         | Record audio; poll until ready                                                                    | Text appears; failures readable                   | Manual / date |
@@ -625,5 +637,6 @@ PR merges that touch `**apps/web`** capture, list, or detail layouts should keep
 | 1.1     | Align linked-input versions (**PRD/TDD v1.3**); fix epic numbering (**E7–E11**); clarify **FR-017** / **FR-018**; trace **NFR-001**, **NFR-004**, **NFR-007**; add **§12.6** mobile standard; tighten quality gates (**§12.5–§12.6**, a11y). |
 | 1.2     | **§5.1** NFR-010 alerting starters; **E12** + **T23**/**T24** + Definition of ready; **§12.1** session-default vs lean **Skills** (developer-manager alignment); prompts **T23–T24**; **§12.4–12.5** **E12** / Later scenarios.              |
 | 1.3     | **§12.2** heading **T1–T24**; Session defaults ↔ **§12.5** (template alignment); template cross-refs (**§12.2** prompts, **§12.5** code-quality tie) synced with `**development-plan-template`** + `**development-planner**`.                |
+| 1.5     | **§12.5** expanded **0.5** manual matrix (incremental API/web/ops rows + execution note); **§8** manual-scenario bullet aligned; **§12.5** intro clarifies sign-off vs stage gate.                                                          |
 
 

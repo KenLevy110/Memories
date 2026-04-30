@@ -1,7 +1,7 @@
 # Run database migrations for production from GitHub Actions.
 # Triggers:
 # - Manual: Actions → "Database migrate" → Run workflow
-# - Automatic: push to main when ENABLE_AUTO_PROD_MIGRATE=true
+# - Automatic: push to main/master when ENABLE_AUTO_PROD_MIGRATE=true
 #
 # Prerequisites:
 # - Root package.json with workspaces and an API package that defines npm run db:migrate
@@ -21,7 +21,7 @@ on:
         required: true
         default: "@memories/api"
   push:
-    branches: [main]
+    branches: [main, master]
     paths:
       - "apps/api/src/db/**"
       - "apps/api/drizzle/**"

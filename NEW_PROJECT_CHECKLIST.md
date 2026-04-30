@@ -8,6 +8,7 @@ Use this checklist when bootstrapping a new repo from Ohana `cursor-template`, o
 - [ ] Define project goals and scope
 - [ ] Replace placeholder domain language in docs and rules
 - [ ] Run `scripts/new-project-init.ps1 <project-name>` or `scripts/new-project-init.sh <project-name>`
+- [ ] Branding: keep [`brand/README.md`](brand/README.md) accurate; replace [`brand/symbol-master.svg`](brand/symbol-master.svg) if the mark changes; sync [`apps/web/public/favicon.svg`](apps/web/public/favicon.svg) (and PWA icons when present)
 
 ## 2) Configure Cursor guidance
 

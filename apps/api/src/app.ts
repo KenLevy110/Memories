@@ -1704,14 +1704,14 @@ export function buildApp(options?: BuildAppOptions) {
   });
 
   app.get(HEALTH_PATH, async () => {
-    const body = { status: "ok" as const, service: "memories-api" };
+    const body = { status: "ok" as const, service: "legacy-api" };
     return healthResponseSchema.parse(body);
   });
 
   app.get(`${API_PREFIX}`, async () => {
     return {
       status: "ok" as const,
-      service: "memories-api",
+      service: "legacy-api",
       version: "v1" as const,
     };
   });

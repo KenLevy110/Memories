@@ -18,7 +18,7 @@ const isQuiet = ["warn", "error", "fatal", "silent"].includes(logLevel);
 const app = buildApp();
 await app.listen({ port, host });
 if (isQuiet) {
-  console.log(`Memories API http://127.0.0.1:${port}`);
+  console.log(`Legacy API http://127.0.0.1:${port}`);
 } else {
-  app.log.info(`Memories API listening on ${host}:${port}`);
+    app.log.info(`Legacy API listening on ${host}:${port}`);
 }

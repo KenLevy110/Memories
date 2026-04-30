@@ -1,7 +1,7 @@
 {
   "name": "memories",
   "private": true,
-  "description": "Memories monorepo: record memories (photos, voice) with server-side transcription",
+  "description": "Legacy product monorepo (@memories/* workspaces): multimodal capture (photos, voice) with server-side transcription",
   "workspaces": [
     "apps/*",
     "packages/*"

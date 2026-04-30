@@ -36,6 +36,20 @@ Each entry should include:
 
 ## Entries
 
+### 2026-04-30 - Legacy product branding (symbol, UI copy, health id)
+
+- **Area:** Web, Shared, API, Docs
+- **Summary:** Unified **`brand/symbol-master.svg`** and **`apps/web/public/favicon.svg`** with the Legacy frame + heart lockup; **`serviceName`** → `legacy`; **`GET /health`** / **`HEAD /health`** body **`service`** → `legacy-api`; startup logs say Legacy API. **`apps/web`** title and splash use **Legacy**; **`README`**, **`AGENTS.md`**, **`brand/README.md`**, root **`package.json`** description updated for customer-facing name. **JWT `aud`** stays **`memories-api`** (`.env.example`, local-auth helper, tests) so existing IdP tokens keep working; REST paths and DB identifiers unchanged.
+- **Touched:** `brand/symbol-master.svg`, `brand/logo-full-color.svg`, `brand/README.md`, `apps/web/public/favicon.svg`, `apps/web/index.html`, `apps/web/src/App.tsx`, `packages/shared/src/index.ts`, `packages/shared/src/index.test.ts`, `apps/api/src/app.ts`, `apps/api/src/app.test.ts`, `apps/api/src/index.ts`, `README.md`, `AGENTS.md`, `package.json`, `docs/implementation-log.md`
+- **Validation:** `npm run test`
+
+### 2026-04-30 - Brand folder + Memories symbol
+
+- **Area:** Web, Docs
+- **Summary:** Added `brand/` (masters aligned with Ohana `cursor-template`), Memories-specific README with voice/color tokens, `symbol-master.svg` + `logo-full-color.svg`, synced `apps/web/public/favicon.svg`, splash uses mark + primary heading color; template verify scripts require `brand/README.md` and `brand/symbol-master.svg`; README layout, `NEW_PROJECT_CHECKLIST`, and `TEMPLATE_SYNC` reference branding workflow.
+- **Touched:** `brand/`, `apps/web/public/favicon.svg`, `apps/web/src/App.tsx`, `scripts/verify-template.ps1`, `scripts/verify-template.sh`, `README.md`, `NEW_PROJECT_CHECKLIST.md`, `TEMPLATE_SYNC.md`, `docs/implementation-log.md`
+- **Validation:** `.\scripts\verify-template.ps1`; `npm run typecheck --workspace=@memories/web`
+
 ### 2026-04-30 - Memory finalize + CRUD API (`T8`, `T9`)
 
 - **Area:** API, Database, Security

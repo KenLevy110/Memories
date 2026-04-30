@@ -16,6 +16,8 @@ required_files=(
   "CODE_OF_CONDUCT.md"
   ".github/PULL_REQUEST_TEMPLATE.md"
   ".github/CODEOWNERS"
+  "brand/README.md"
+  "brand/symbol-master.svg"
 )
 
 missing=()

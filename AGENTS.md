@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Repository-wide guidance for AI coding agents in the **Memories** monorepo: record memories with **photos**, **recorded voice**, and **transcription** (the Dashboard and other services are separate git repositories). When your layout or quality gates differ from the defaults below, update this file and the matching sections of `docs/` and CI so agents and humans see one story.
+Repository-wide guidance for AI coding agents in the **Legacy** product monorepo (workspace packages remain `@memories/*`): multimodal capture with **photos**, **recorded voice**, and **transcription** (the Dashboard and other services are separate git repositories). When your layout or quality gates differ from the defaults below, update this file and the matching sections of `docs/` and CI so agents and humans see one story.
 
 ## Monorepo structure
 
@@ -53,7 +53,7 @@ If behavior, architecture, testing policy, or release gates change, update the c
 - `docs/development-plan-v1.md` (editioned plan; see also optional `docs/development-plan.md` pointer)
 - `docs/tech-stack.md`
 
-For new or substantially rewritten docs under `docs/`, read and follow the matching template in `docs/templates/` before drafting. **Filled-in references** for Memories are the editioned `docs/*-v1.md` files (PRD, TDD, wireframes, development plan, workflow)—not a separate `docs/examples/` tree.
+For new or substantially rewritten docs under `docs/`, read and follow the matching template in `docs/templates/` before drafting. **Filled-in references** for Legacy are the editioned `docs/*-v1.md` files (PRD, TDD, wireframes, development plan, workflow)—not a separate `docs/examples/` tree.
 
 **Development plan numbering:** **`docs/templates/development-plan-template.md`** defines **Sections 0–13** and **§12.1–12.5**; **§12.3** is “Standard test commands” and **§12.5** is the manual matrix (Session defaults tie **§8** + **§12.5**). Filled **`development-plan-v*.md`** files may add **§5.x** subsections under **§5** and **`### 12.6 Mobile automation standard`** after **§12.5**, per **`.cursor/skills/development-planner/SKILL.md`**.
 

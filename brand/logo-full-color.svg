@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 132 32" role="img" aria-label="Legacy wordmark">
+  <!-- Icon: same geometry as brand/symbol-master.svg -->
+  <svg x="0" y="0" width="32" height="32" viewBox="0 0 32 32">
+    <rect width="32" height="32" rx="7" fill="#eef4f1"/>
+    <rect x="5" y="5" width="22" height="22" rx="2.5" fill="#2f5d50"/>
+    <rect x="8" y="8" width="16" height="16" rx="1.5" fill="#d4e4dc"/>
+    <rect x="10" y="10" width="12" height="12" rx="1" fill="#faf8f5"/>
+    <path
+      fill="#b86b5c"
+      d="M16 21.25 C13.5 19 10.65 17 10.65 14 C10.65 12 12.05 10.75 14.15 10.75 C15 10.75 15.65 11.15 16 11.65 C16.35 11.15 17 10.75 17.85 10.75 C19.95 10.75 21.35 12 21.35 14 C21.35 17 18.5 19 16 21.25 Z"
+    />
+  </svg>
+  <text
+    x="40"
+    y="21"
+    font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+    font-size="15"
+    font-weight="600"
+    fill="#2f5d50"
+    letter-spacing="0.02em"
+  >Legacy</text>
+</svg>

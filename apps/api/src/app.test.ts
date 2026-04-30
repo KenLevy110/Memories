@@ -386,7 +386,7 @@ describe("api auth shell", () => {
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body) as { status: string; service: string };
     expect(body.status).toBe("ok");
-    expect(body.service).toBe("memories-api");
+    expect(body.service).toBe("legacy-api");
   });
 
   it("returns 401 for unsigned /api/v1 requests", async () => {

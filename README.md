@@ -1,6 +1,6 @@
-# Memories
+# Legacy
 
-Monorepo for the **Memories** service: capture and preserve memories with **photos**, **recorded voice**, and **transcription** (to be implemented). The **Dashboard** and other products live in separate repositories; this repo is only **Memories** (Node + TypeScript API, React + TypeScript web, shared contracts).
+Product (**Legacy**): capture and preserve what matters with **photos**, **recorded voice**, and **transcription** (to be implemented). The **Dashboard** and other platform apps live in separate repositories; this repo ships the Legacy vertical (**npm** workspaces `@memories/*`, Node + TypeScript API, React + TypeScript web, shared contracts).
 
 ## Layout
 
@@ -9,6 +9,7 @@ Monorepo for the **Memories** service: capture and preserve memories with **phot
 | `apps/web` | React (Vite) — `@memories/web` |
 | `apps/api` | Node/TypeScript HTTP API — `@memories/api` |
 | `packages/shared` | Shared Zod types and constants — `@memories/shared` |
+| `brand` | Logo masters and brand notes ([`brand/README.md`](brand/README.md)); sync favicon/PWA from here into `apps/web/public/` |
 | `docs`, `.cursor` | Product docs, Cursor rules and skills (from the Ohana template) |
 
 ## Prereqs

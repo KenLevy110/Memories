@@ -7,7 +7,7 @@ const apiBase =
 function App() {
   return (
     <main
-      className="memories-splash"
+      className="legacy-splash"
       style={{
         minHeight: "100vh",
         display: "grid",
@@ -17,9 +17,18 @@ function App() {
       }}
     >
       <div>
-        <h1 style={{ fontSize: "1.75rem", margin: "0 0 0.5rem" }}>Memories</h1>
+        <img
+          src="/favicon.svg"
+          alt="Legacy"
+          width={48}
+          height={48}
+          style={{ display: "block", marginBottom: "0.75rem" }}
+        />
+        <h1 style={{ fontSize: "1.75rem", margin: "0 0 0.5rem", color: "#2f5d50" }}>
+          Legacy
+        </h1>
         <p style={{ margin: 0, color: "#444" }}>
-          Record photos, voice, and transcriptions. Shared package:{" "}
+          Preserve photos, voice, and transcriptions. Shared package id:{" "}
           <code>{serviceName}</code>
         </p>
         <p style={{ margin: "0.75rem 0 0", fontSize: "0.9rem", color: "#666" }}>

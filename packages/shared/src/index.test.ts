@@ -20,7 +20,7 @@ const mediaId = "9279ea09-f589-4329-a67a-cdfb9151ca6b";
 
 describe("shared", () => {
   it("exports service name", () => {
-    expect(serviceName).toBe("memories");
+    expect(serviceName).toBe("legacy");
   });
 
   it("validates health response", () => {

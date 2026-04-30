@@ -21,6 +21,7 @@ This repo is the canonical starter pack for reusable project scaffolding.
 - formatting defaults (`.prettierrc.json`, `.prettierignore`)
 - team ownership file (`.github/CODEOWNERS`)
 - setup scaffolding (`.env.example`, `scripts/bootstrap.*`, `scripts/new-project-init.*`, `scripts/verify-template.*`)
+- `brand/` (masters + [`brand/README.md`](brand/README.md); product repos replace placeholder art with real marks)
 
 ## What not to copy by default
 

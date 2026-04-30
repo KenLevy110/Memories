@@ -14,7 +14,7 @@ For template structure and section intent, see [development-plan-template.md](te
 | Field             | Value                                                                                 |
 | ----------------- | ------------------------------------------------------------------------------------- |
 | **Title**         | Memories — development plan                                                           |
-| **Version**       | 1.4                                                                                   |
+| **Version**       | 1.5                                                                                   |
 | **Author**        | Ken Levy                                                                              |
 | **Date**          | 2026-04-30                                                                            |
 | **Status**        | Draft                                                                                 |
@@ -223,7 +223,7 @@ Skills reference: match owner lane to `.cursor/skills/<name>/SKILL.md` (see Sect
 Quality gates:
 
 - Keep CI gates from [AGENTS.md](../AGENTS.md) unless this plan’s revision history records a **waived** change with owner + expiry.
-- **Manual scenarios:** execute or sign off per **§12.5** before treating a stage as release-ready.
+- **Manual scenarios:** execute or sign off per **§12.5** before treating a stage as release-ready; **0.5** matrix rows may be signed **incrementally** as their **Related tickets** land (see **§12.5** intro), but **Stage 0.5** production still needs **every** **0.5** row completed.
 - **Mobile web:** PR smoke on **mobile Chrome + mobile Safari (WebKit)** per **§12.6** when `apps/web` capture or list UX changes.
 - Regression focus: **authz**, **idempotency**, **signing expiry**, **transcript state** once **0.8** ships; **accessibility** (**NFR-004**, **NFR-012**) on primary flows via T11/T14 and design-wireframe states.
 - Update [implementation-log.md](implementation-log.md) when tickets complete.
@@ -343,6 +343,8 @@ Mount `/api/v1`; implement JWKS JWT verify; attach `request_id`; reject unsigned
 **Skills to read first:** `developer-backend`, `developer-security`, `developer-senior`.
 
 **Verify:** Unit/integration tests with mocked JWKS; `npm run test -w @memories/api`.
+
+DONE 2026-04-30
 
 ---
 

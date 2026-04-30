@@ -1,7 +1,9 @@
 # Runs on every push to main/master and on pull requests.
 # Jobs: docs-smoke (templates + governance layout), checks (optional root npm when package.json exists).
 # This workflow does NOT run database migrations or deploy—add a separate workflow when you have an API workspace.
-name: CI
+name: GitHub CI Actions
+
+run-name: GitHub CI Actions (${{ github.event_name }})
 
 on:
   pull_request:

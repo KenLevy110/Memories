@@ -10,7 +10,9 @@
 # Safety switch:
 # - Repository secret ENABLE_AUTO_PROD_MIGRATE must be exactly "true" for auto runs.
 
-name: Database migrate
+name: Database Migration
+
+run-name: Database Migration (${{ github.event_name }})
 
 on:
   workflow_dispatch:
@@ -95,8 +97,49 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL_PRODUCTION }}
           API_WORKSPACE: ${{ github.event.inputs.api_workspace || '@memories/api' }}
         run: |
+          set -euo pipefail
+
           if [ -z "${DATABASE_URL:-}" ]; then
             echo "Missing DATABASE_URL_PRODUCTION repository secret."
             exit 1
           fi
-          npm run db:migrate -w "$API_WORKSPACE"
+
+          migrate_log="$(mktemp)"
+          if ! npm run db:migrate -w "$API_WORKSPACE" 2>&1 | tee "$migrate_log"; then
+            echo "::error::db:migrate failed. Printing captured migrate output and DB connectivity diagnostics."
+            echo "----- begin db:migrate output -----"
+            cat "$migrate_log"
+            echo "----- end db:migrate output -----"
+
+            node <<'EOF'
+            const { Client } = require("pg");
+
+            async function run() {
+              const client = new Client({ connectionString: process.env.DATABASE_URL });
+              try {
+                await client.connect();
+                const { rows } = await client.query(
+                  "select current_database() as db, current_user as usr, version() as version"
+                );
+                const row = rows[0] || {};
+                console.log("DB connectivity check:", {
+                  database: row.db,
+                  user: row.usr,
+                  version_prefix: typeof row.version === "string" ? row.version.split(" ").slice(0, 2).join(" ") : "unknown",
+                });
+              } catch (err) {
+                console.error("DB connectivity diagnostic failed:", err && err.message ? err.message : String(err));
+              } finally {
+                try {
+                  await client.end();
+                } catch {}
+              }
+            }
+
+            run().catch((err) => {
+              console.error("Unexpected diagnostics error:", err && err.message ? err.message : String(err));
+            });
+            EOF
+
+            exit 1
+          fi

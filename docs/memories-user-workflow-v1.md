@@ -7,7 +7,8 @@
 | **Purpose** | Single place for **capture → save → list** flow: screenshots, flow diagram, and low-fi layout notes. |
 | **Used by** | [product-requirements-v1.md](product-requirements-v1.md), [technical-design-v1.md](technical-design-v1.md), [design-wireframe-v1.md](design-wireframe-v1.md) |
 | **Screenshots** | `docs/assets/workflow-screenshots/*.png` (7 steps, committed to repo) |
-| **Last updated** | 2026-04-22 |
+| **Last updated** | 2026-04-30 |
+| **Routing (web)** | **TanStack Router**; capture = one path + **`?step=`** (see below); canonical detail in [technical-design-v1.md](technical-design-v1.md) §3.1 |
 
 ---
 
@@ -25,13 +26,29 @@ flowchart LR
 
 **Context bar (all capture steps):** “Facilitating for [Client]” — Guide-led capture for an elder; aligns with handoff and PRD `ClientAccess` / facilitator model.
 
+### Web routes (`?step=`)
+
+Implementation uses a **single capture URL** with a query parameter so refresh and deep links preserve the step. `:clientId` is the client UUID (or stable id) from context.
+
+| Where you are in the flow | Path (logical) |
+| --- | --- |
+| Memories list (FAB) | `/clients/:clientId/memories` |
+| Photograph | `/clients/:clientId/capture?step=photo` |
+| Name and room | `/clients/:clientId/capture?step=meta` |
+| Story prompt (before record) | `/clients/:clientId/capture?step=prompt` |
+| Recording | `/clients/:clientId/capture?step=record` |
+| Review and save | `/clients/:clientId/capture?step=review` |
+| Success | `/clients/:clientId/capture?step=done` |
+
+REST APIs for each step are listed in [technical-design-v1.md](technical-design-v1.md) §3.1 (`/api/v1/...`).
+
 ---
 
 ## Step-by-step (hi-fi screenshots)
 
 Paths are relative to this file (`docs/`).
 
-### 1 — Photograph (Step 1 of 4)
+### 1 — Photograph (Step 1 of 4) — `?step=photo`
 
 ![Step 1: photograph the object](assets/workflow-screenshots/01-step-1-photograph.png)
 
@@ -40,15 +57,15 @@ Paths are relative to this file (`docs/`).
 - Primary: camera / viewfinder area; optional **Choose from Library**.
 - Primary CTA: **Continue**.
 
-### 2 — Name and room (Step 2 of 4)
+### 2 — Name and room (Step 2 of 4) — `?step=meta`
 
 ![Step 2: object name and room chips](assets/workflow-screenshots/02-step-2-name-room.png)
 
 - Photo thumbnail + retake.
-- **Object name** (required); **Room** chips (required in Guide flow per PRD **FR-007**).
+- **Object name** (required); **Room** chips (**required** in Guide flow; **optional** in consumer / family capture per PRD **FR-007**).
 - CTA: **Continue**.
 
-### 3a — Story prompt (Step 3 of 4, before record)
+### 3a — Story prompt (Step 3 of 4, before record) — `?step=prompt`
 
 ![Step 3a: Ohana Guide suggested prompt](assets/workflow-screenshots/03-step-3a-prompt-record.png)
 
@@ -56,14 +73,14 @@ Paths are relative to this file (`docs/`).
 - **Ohana Guide suggests** — warm question for facilitator to ask elder (maps to **FR-015**).
 - Mic CTA + alternates: record video / type or transcribe.
 
-### 3b — Recording (Step 3 of 4, active)
+### 3b — Recording (Step 3 of 4, active) — `?step=record`
 
 ![Step 3b: listening / recording state](assets/workflow-screenshots/04-step-3b-recording.png)
 
 - Stop control; status (e.g. “Listening to …”).
 - Same prompt card for context.
 
-### 4 — Review and save (Step 4 of 4)
+### 4 — Review and save (Step 4 of 4) — `?step=review`
 
 ![Step 4: review audio, optional tags](assets/workflow-screenshots/05-step-4-review-save.png)
 
@@ -71,13 +88,13 @@ Paths are relative to this file (`docs/`).
 - Optional **Tags** (chips + add).
 - CTA: **Save to [Client]'s Archive** — idempotent save / offline queue per **FR-013**, **FR-014**.
 
-### 5 — Success
+### 5 — Success — `?step=done`
 
 ![Success: memory saved confirmation](assets/workflow-screenshots/06-success-saved.png)
 
 - Confirmation + **View in Archive** / **Capture another memory**.
 
-### 6 — Memories list (client context)
+### 6 — Memories list (client context) — `/clients/:clientId/memories`
 
 ![Memories tab: list with FAB](assets/workflow-screenshots/07-memories-list.png)
 
@@ -136,23 +153,23 @@ Use for quick reviews when PNGs are not open. Boxes = major regions, not pixel-a
 
 ## PRD / TDD trace (quick)
 
-| UI step | PRD (examples) | TDD will specify |
+| UI step | PRD (examples) | TDD §3.1 (v1.1) |
 | --- | --- | --- |
-| Photo / library | **FR-005**, **FR-011** | Upload, MIME/size, client resize |
-| Name / room | **FR-007** | Validation, i18n limits |
-| Prompt | **FR-015** | API contract, fallback copy, latency **NFR-005** |
-| Record / playback | **FR-006**, **FR-008**, **FR-009** | MediaRecorder, storage, STT job |
-| Review / tags | **FR-016**, **FR-017** (phased) | Tag model, permissions |
-| Save | **FR-013**, **FR-014**, **FR-019** | Idempotency, queue, audit |
-| List | **FR-010**, **FR-012** | Pagination, authz |
-| Simplicity | **NFR-012** | Copy deck, touch targets, max actions per screen |
+| Photo / library | **FR-005**, **FR-011** | `?step=photo` → `POST /api/v1/uploads/images/sign` + PUT; IndexedDB draft |
+| Name / room | **FR-007** | `?step=meta`; client-only draft until finalize |
+| Prompt | **FR-015** | `?step=prompt` → `POST /api/v1/memories/suggest_prompt` |
+| Record / playback | **FR-006**, **FR-008**, **FR-009** | `?step=record` → audio sign + PUT; transcript poll on detail |
+| Review / tags | **FR-016**, **FR-017** (phased) | `?step=review` → `POST /api/v1/memories` |
+| Save | **FR-013**, **FR-014**, **FR-019** | Idempotency key; offline queue; audit |
+| Success | **FR-002** | `?step=done`; optional `GET /api/v1/memories/:id` |
+| List | **FR-010**, **FR-012** | `GET /api/v1/clients/:clientId/memories?cursor=` |
+| Simplicity | **NFR-012** | [design-wireframe-v1.md](design-wireframe-v1.md); copy and touch targets |
 
 ---
 
-## Next steps for you
+## Related work
 
-1. **Commit** `docs/assets/workflow-screenshots/*.png` and this file with git.  
-2. **Technical design:** **[technical-design-v1.md](technical-design-v1.md)** Section 3 (step → route → API).  
-3. **Wireframes:** supplementary states in **[design-wireframe-v1.md](design-wireframe-v1.md)**; this doc stays the **hi-fi** reference.
+1. **Technical design:** **[technical-design-v1.md](technical-design-v1.md)** §3.1 — keep routes and APIs in sync when the flow changes.  
+2. **Wireframes:** supplementary states in **[design-wireframe-v1.md](design-wireframe-v1.md)**; this doc stays the **hi-fi** reference.
 
-You do **not** need to re-save screenshots elsewhere if they live under `docs/assets/workflow-screenshots/` as committed files.
+Screenshots live under `docs/assets/workflow-screenshots/` as committed files.

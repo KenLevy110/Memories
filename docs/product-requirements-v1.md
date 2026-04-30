@@ -11,7 +11,7 @@
 | **Status**              | Draft                                                                                                                                                                                                                                                                                                                                                  |
 | **Version**             | 1.0                                                                                                                                                                                                                                                                                                                                                    |
 | **Edition**             | **v1** — filename `product-requirements-v1.md`. Breaking rewrites: new file (`-v2.md`, …). Minor edits: same file + revision note below.                                                                                                                                                                                                              |
-| **Last updated**        | 2026-04-22                                                                                                                                                                                                                                                                                                                                             |
+| **Last updated**        | 2026-04-30                                                                                                                                                                                                                                                                                                                                             |
 | **Template used**       | `.cursor/skills/product-manager/reference.md`; `docs/templates/product-requirements-template.md` (control table)                                                                                                                                                                                                                                       |
 | **Related docs**        | [README.md](../README.md); [tech-stack.md](tech-stack.md); [memories-user-workflow-v1.md](memories-user-workflow-v1.md); [technical-design-v1.md](technical-design-v1.md); [design-wireframe-v1.md](design-wireframe-v1.md); [implementation-log.md](implementation-log.md); [adr/README.md](adr/README.md); [Prototype Backend Engineering Handoff.md](Prototype%20Backend%20Engineering%20Handoff.md); TBD: [development-plan.md](development-plan.md) |
 | **External references** | [Notion mirror](https://plump-cheddar-f44.notion.site/Prototype-Backend-Engineering-Handoff-349fc9f5d1f880968428eac8506f728a?pvs=73) — **authoritative:** repo handoff markdown above                                                                                                                                                                  |
@@ -98,7 +98,7 @@ A **Memory** is metadata (e.g. name, room; optional era/valence per Section 4.3)
 | **FR-004** | Delete where policy allows + confirm.                                                                          | P1  | Family may not delete (Section 7.2) |
 | **FR-005** | One or more images as **MemoryMedia**.                                                                         | P0  | Section 4.2                         |
 | **FR-006** | Audio attach + playback; STT-friendly format (e.g. AAC/M4A).                                                   | P0  | Section 5.1                         |
-| **FR-007** | Text fields with limits; **name + room** required in Guide flow; consumer may relax room—PM call.              | P0  | Section 5.1                         |
+| **FR-007** | Text fields with limits; **name + room** required in **Guide** flow; **room optional** in consumer / family capture (signed off 2026-04-30 — Ken Levy).              | P0  | Section 5.1; [ADR-20260430](adr/ADR-20260430-memories-platform-boundary-auth-routing.md)                         |
 | **FR-008** | Async transcription → **MemoryTranscript** (+ confidence if vendor).                                           | P0  | Sections 4.2, 5.1, 12.1             |
 | **FR-009** | Transcription UI: pending / ready / failed.                                                                    | P0  |                                     |
 | **FR-010** | List with cursor pagination (~20), recency default.                                                            | P0  | Section 5.5                         |
@@ -161,7 +161,9 @@ A **Memory** is metadata (e.g. name, room; optional era/valence per Section 4.3)
 
 **Risks:** BAA lead time → parallel legal + synthetic staging (Sections 8.5–8.6); offline capture cost → timeboxed spike (Section 12.4); repo boundary → explicit contracts in TDD; PHI in notifications/logs → generic notifications + redaction (Sections 10.3, 11.1).
 
-**Open questions:** (1) Is this API **system of record** for Practice/Client/Memory vs. **BFF** to another service? (2) STT vendor. (3) Cloud path A/B/C vs current Fastify+Postgres. (4) Consumer mode: require **room** or not? (5) Family accounts vs link-only for pilot (Section 13.1). (6) PHI in notifications (Section 10.3). (7) Death-of-client retention (Sections 9.4, 13.1).
+**Resolved (2026-04-30, Ken Levy sign-off):** Former open questions are decided in **[ADR-20260430-memories-platform-boundary-auth-routing.md](adr/ADR-20260430-memories-platform-boundary-auth-routing.md)** and **[technical-design-v1.md](technical-design-v1.md)**. Summary: (1) **Split SoR** — platform owns Practice/User/Client/`ClientAccess`; Memories owns memory tables, jobs, memory audit. (2) **STT** — adapter + vendor per BAA (stub in dev). (3) **Cloud** — managed Postgres + S3-compatible storage + containers on chosen cloud; Fastify remains the API runtime. (4) **Room** — required for Guide; optional for consumer/family capture. (5) **Family pilot** — time-bound magic links / invites preferred over full accounts where product allows. (6) **Notifications** — generic only (no PHI in payloads). (7) **Death / retention** — legal owns policy; engineering ships soft-delete, export hooks, configurable retention (no fixed years in code until compliance signs).
+
+**Still environment-specific (not product ambiguity):** exact JWT claim names; STT/LLM vendor *instances* after BAAs; worker deployment shape—coordinate in implementation and `tech-stack.md`.
 
 ---
 
@@ -178,6 +180,7 @@ A **Memory** is metadata (e.g. name, room; optional era/valence per Section 4.3)
 | File revision | Date | Summary |
 | --- | --- | --- |
 | v1 | 2026-04-22 | Renamed to `product-requirements-v1.md`; content PRD 1.0 |
+| v1.1 | 2026-04-30 | Closed prior “open questions” via ADR-20260430 + TDD 1.1; FR-007 room rule clarified |
 
 ---
 

@@ -15,3 +15,4 @@ Use `docs/templates/decision-log-template.md` for new ADRs.
 
 - [ADR-20260423-architecture-baseline.md](ADR-20260423-architecture-baseline.md) - Baseline monorepo architecture pattern.
 - [ADR-20260423-postgres-system-of-record.md](ADR-20260423-postgres-system-of-record.md) - PostgreSQL default system-of-record pattern.
+- [ADR-20260430-memories-platform-boundary-auth-routing.md](ADR-20260430-memories-platform-boundary-auth-routing.md) - **Accepted:** Memories vs platform SoR split, JWT auth, routing, jobs, poll, Drizzle, pilot policies (Ken Levy sign-off).

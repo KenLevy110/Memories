@@ -6,7 +6,7 @@
 | --- | --- |
 | **Owner** | Engineering |
 | **Status** | Active |
-| **Last updated** | 2026-04-23 |
+| **Last updated** | 2026-04-30 |
 | **Template used** | Repository convention (implementation activity log) |
 | **Related docs** | [product-requirements-v1.md](product-requirements-v1.md); [technical-design-v1.md](technical-design-v1.md); [development-plan.md](development-plan.md); [adr/README.md](adr/README.md) |
 
@@ -35,6 +35,15 @@ Each entry should include:
 ---
 
 ## Entries
+
+### 2026-04-30 - Technical decisions documented (SoR, auth, routing)
+
+- **Area:** Docs / Architecture
+- **Summary:** Accepted **ADR-20260430** (platform vs Memories system-of-record split, JWT verification, TanStack Router + `?step=`, client-side drafts, Postgres job queue + poll for transcripts, Drizzle, S3 key layout, pilot policies). Updated **technical-design-v1.md** to v1.1 Approved, **tech-stack.md** to Approved, **product-requirements-v1.md** open questions resolved and FR-007 clarified. Ken Levy recorded as engineering owner and sign-off.
+- **Touched:** `docs/adr/ADR-20260430-memories-platform-boundary-auth-routing.md`, `docs/adr/README.md`, `docs/adr/ADR-20260423-postgres-system-of-record.md`, `docs/technical-design-v1.md`, `docs/tech-stack.md`, `docs/product-requirements-v1.md`, `docs/memories-user-workflow-v1.md`, `docs/implementation-log.md`
+- **Validation:** Doc consistency pass; cross-links between PRD, TDD, tech-stack, ADR index.
+- **Follow-ups:** Coordinate JWT claim names with Dashboard; lock STT/LLM vendor instances after BAAs; add `development-plan.md` when ready for execution slices.
+- **Links:** [ADR-20260430](adr/ADR-20260430-memories-platform-boundary-auth-routing.md)
 
 ### 2026-04-23 - Documentation governance baseline
 

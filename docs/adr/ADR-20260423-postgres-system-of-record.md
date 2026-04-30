@@ -7,7 +7,7 @@
 - Status: Proposed
 - Owners: Engineering
 - Template used: `docs/templates/decision-log-template.md`
-- Related docs/issues/PRs: `docs/tech-stack.md`, `docs/technical-design-v1.md`, `docs/product-requirements-v1.md`
+- Related docs/issues/PRs: `docs/tech-stack.md`, `docs/technical-design-v1.md`, `docs/product-requirements-v1.md`, [ADR-20260430-memories-platform-boundary-auth-routing.md](ADR-20260430-memories-platform-boundary-auth-routing.md)
 
 ## Context
 
@@ -34,6 +34,7 @@ Use PostgreSQL as the default system of record for core domain data.
 - Domain entities should be modeled with explicit relations and constraints.
 - Critical writes should be transactional.
 - Performance work should start with query/index tuning before datastore changes.
+- **Memories product boundary:** PostgreSQL in this repo is system of record for the **memory vertical** (memories, media, transcripts, jobs, memory audit) per [ADR-20260430-memories-platform-boundary-auth-routing.md](ADR-20260430-memories-platform-boundary-auth-routing.md); platform services own CRM/identity tables.
 
 ## Rollback / reversal plan
 

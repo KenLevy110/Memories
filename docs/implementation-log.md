@@ -36,6 +36,13 @@ Each entry should include:
 
 ## Entries
 
+### 2026-04-30 - Memory finalize + CRUD API (`T8`, `T9`)
+
+- **Area:** API, Database, Security
+- **Summary:** Added `POST /api/v1/clients/:clientId/memories` idempotent finalize (with `Idempotency-Key` support and Stage 0.5 media caps: max 1 image + 1 audio), plus `GET` list/detail, `PATCH`, and soft `DELETE` routes under `/api/v1/clients/:clientId/memories...`. Added role-gated mutation authz for memory CRUD, cursor pagination, and mutation audit event writes in the default DB-backed repository.
+- **Touched:** `apps/api/src/app.ts`, `apps/api/src/app.test.ts`, `docs/development-plan-v1.md`, `docs/implementation-log.md`
+- **Validation:** `npm run typecheck --workspace=@memories/api`; `npm test --workspace=@memories/api`
+
 ### 2026-04-30 - Playback sign-read endpoint (`T7`)
 
 - **Area:** API, Security

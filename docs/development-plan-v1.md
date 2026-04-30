@@ -49,9 +49,9 @@ Per [documentation governance](../.cursor/rules/docs-governance.mdc), derived do
 ## 3. Executive summary
 
 - **Delivery goal:** Implement the Memories vertical (`apps/web`, `apps/api`, `packages/shared`) so **Stage 0.5** can run in **production** with **one photo** and **one in-browser audio recording** per memory, plus **list**, **detail**, **playback**, **JWT authz**, **signed object storage**, **idempotent save**, **offline-tolerant client retry**, and **audit** for PHI-bearing writes. **Later stages** add **multiple images**, **uploaded audio files** (not only `MediaRecorder`), **async transcription** + UI states, **video capture**, and **AI `suggest_prompt` / tags** per PRD priorities—each stage is **deployable** behind the same API/versioning discipline. Success is measured by **safe production operation** (no authz leaks, no PHI in logs), **resilient capture** (retries without duplicate memories), and **traceability** to **FR-** / **NFR-** IDs.
-- **Product locks / decisions:** Platform owns IdP and client access; Memories enforces **app-layer authz** on every route (**FR-012**). **Tenancy:** Guide and client-self are **distinct `User`s** with **distinct passwords** (or invite flows); they share only the **`client_id` workspace** (PRD tenancy subsection + TDD §2). **no Postgres RLS** in v1 per TDD; **IndexedDB-only drafts** until finalize; **poll** for transcript status when transcription ships (**FR-009**). **Staged exception (Stage 0.5):** transcription pipeline and `suggest_prompt` may be **off or stubbed** in production until **Stage 0.8 / 1.0**—documented explicitly in Section 4 so PM/compliance can sign the reduced P0 set for the first go-live.
+- **Product locks / decisions:** Platform owns IdP and client access; Memories enforces **app-layer authz** on every route (**FR-012**). **Tenancy:** Guide and client-self are **distinct `User`s** with **distinct passwords** (or invite flows); they share only the `**client_id` workspace** (PRD tenancy subsection + TDD §2). **no Postgres RLS** in v1 per TDD; **IndexedDB-only drafts** until finalize; **poll** for transcript status when transcription ships (**FR-009**). **Staged exception (Stage 0.5):** transcription pipeline and `suggest_prompt` may be **off or stubbed** in production until **Stage 0.8 / 1.0**—documented explicitly in Section 4 so PM/compliance can sign the reduced P0 set for the first go-live.
 - **Execution approach:** **Foundation and API contracts** first (schema, JWT, signing, CRUD), then **web capture v0.5**, then **production readiness** (observability, smoke/E2E). **Epics E7–E11** layer post–0.5 capabilities **after** the **0.5** milestone (T1–T14) is stable; each epic should merge with **feature flags** or **config** so production can enable capabilities incrementally. (**E6** is production readiness and overlaps **0.5** via T13–T14, T22.)
-- **Quality bar:** Align with **[AGENTS.md](../AGENTS.md)** — typically **≥ 80%** line/statement coverage and changed-file floors, **security** per PRD/TDD and `**developer-security`**, and **three review layers** on non-trivial work: `**developer-code-quality`**, `**developer-senior**` where Section 12 marks **Sr** or trust boundaries move, and `**developer-quality-assurance`** where **QA** is primary or release/regression scope requires it. CI: `npm run lint`, `npm run typecheck`, `npm run test` at minimum before merge.
+- **Quality bar:** Align with **[AGENTS.md](../AGENTS.md)** — typically **≥ 80%** line/statement coverage and changed-file floors, **security** per PRD/TDD and `**developer-security`**, and three review layers on non-trivial work: `**developer-code-quality`**, `**developer-senior**` where Section 12 marks **Sr** or trust boundaries move, and `**developer-quality-assurance`** where **QA** is primary or release/regression scope requires it. CI: `npm run lint`, `npm run typecheck`, `npm run test` at minimum before merge.
 
 ### 3.1 AI-first delivery assumptions
 
@@ -68,7 +68,7 @@ Per [documentation governance](../.cursor/rules/docs-governance.mdc), derived do
 | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | Staged prod delivery **0.5 → 1.0** per Section 7                                                                 | Full Ohana Way shell (Dashboard, inbox, AI Guide UI)     |
 | REST API under `**/api/v1/`** per [technical-design-v1.md](technical-design-v1.md) §3.2                          | Native mobile apps beyond PWA/browser                    |
-| Web: TanStack Router, capture `**?step=**` flow per [memories-user-workflow-v1.md](memories-user-workflow-v1.md) | Postgres RLS in v1                                       |
+| Web: TanStack Router, capture `**?step=`** flow per [memories-user-workflow-v1.md](memories-user-workflow-v1.md) | Postgres RLS in v1                                       |
 | Object storage signing + playback signing                                                                        | Practice billing, messaging, telephony                   |
 | Drizzle migrations, audit events, job rows when transcription ships                                              | Building full pilot **inside** this repo unless rescoped |
 
@@ -92,7 +92,7 @@ Per [documentation governance](../.cursor/rules/docs-governance.mdc), derived do
 
 ## 5. Assumptions and constraints
 
-- **JWT claims** (`practice_id`, `user_id`, `client_id` or broader client scope, roles that distinguish **Guide** vs **client-self**) are agreed with Dashboard; Memories **binds route params to claims** (**FR-012**). Tokens for Guides may authorize **many** `client_id` values; tokens for **`CLIENT_SELF`–type users must be narrow**—path `:clientId` matches focal client only ( **[technical-design-v1.md](technical-design-v1.md)** §2, §7).
+- **JWT claims** (`practice_id`, `user_id`, `client_id` or broader client scope, roles that distinguish **Guide** vs **client-self**) are agreed with Dashboard; Memories **binds route params to claims** (**FR-012**). Tokens for Guides may authorize **many** `client_id` values; tokens for `**CLIENT_SELF`–type users must be narrow**—path `:clientId` matches focal client only ( **[technical-design-v1.md](technical-design-v1.md)** §2, §7).
 - **BAA / NFR-007:** no real PHI in production vendors until BAAs exist; use synthetic data in lower environments.
 - **Schema:** `memory_media` may allow multiple rows from **Stage 0.6** onward; **Stage 0.5** enforces **at most one image and one audio** in validation and UI to avoid half-built multi-attach UX.
 - **Offline:** client queue and **Idempotency-Key** on finalize (**FR-013**, **FR-014**) are required for 0.5; Background Sync is progressive enhancement.
@@ -297,20 +297,20 @@ Quality gates:
 ### Session defaults (read once per plan / branch execution)
 
 - `**developer-testing`** — Follow `.cursor/skills/developer-testing/SKILL.md` for test runs.
-- `**developer-code-quality**` — Structural pass before review (**Section 8**); aligns with closing note after **§12.5**.
+- `**developer-code-quality`** — Structural pass before review (**Section 8**); aligns with closing note after **§12.5**.
 - **Git / PRs:** Do **not** create branches or PRs unless the human asks ([AGENTS.md](../AGENTS.md)).
 
 ### 12.1 Skill-reading convention (required per prompt)
 
-Each prompt ends with **Skills to read first** naming `.cursor/skills/<name>/` folders. Lines are intentionally **lean** (lane + conditional extras per [development-plan-template.md](templates/development-plan-template.md) §12.1): add `**developer-security`** for JWT, signing, or audit boundaries; `**developer-unit-testing**` when the ticket **introduces or reshapes** suites; `**developer-quality-assurance`** / `**developer-manager**` only when the §6.2 ticket implies QA matrix or rollout ownership; `**developer-senior**` on high‑risk merges (authz, idempotency, cross-cutting contracts) or wherever §6.2 marks **Sr** as primary reviewer **before** merge.
+Each prompt ends with **Skills to read first** naming `.cursor/skills/<name>/` folders. Lines are intentionally **lean** (lane + conditional extras per [development-plan-template.md](templates/development-plan-template.md) §12.1): add `**developer-security`** for JWT, signing, or audit boundaries; `**developer-unit-testing`** when the ticket **introduces or reshapes** suites; `**developer-quality-assurance`** / `**developer-manager`** only when the §6.2 ticket implies QA matrix or rollout ownership; `**developer-senior`** on high‑risk merges (authz, idempotency, cross-cutting contracts) or wherever §6.2 marks **Sr** as primary reviewer **before** merge.
 
-**Session defaults** (the Section 12 opening bullets above) apply to **every** prompt without repeating them on each card: `**developer-testing`** (how to run and triage CI/local tests) and `**developer-code-quality**` (structural pass before review — Section 8). That pairing satisfies the intent of broader “baseline skills” coordination in `**.cursor/skills/developer-manager/SKILL.md**` for **this repo**. Explicit `**developer-testing`** on **T14**-style prompts remains appropriate because those tickets own the harness expansion.
+**Session defaults** (the Section 12 opening bullets above) apply to **every** prompt without repeating them on each card: `**developer-testing`** (how to run and triage CI/local tests) and `**developer-code-quality`** (structural pass before review — Section 8). That pairing satisfies the intent of broader “baseline skills” coordination in `**.cursor/skills/developer-manager/SKILL.md`** for **this repo**. Explicit `**developer-testing`** on **T14**-style prompts remains appropriate because those tickets own the harness expansion.
 
 Repository skill folders include: `developer-backend`, `developer-database`, `developer-frontend-ui`, `developer-frontend-data-sync`, `developer-security`, `developer-unit-testing`, `developer-testing`, `developer-quality-assurance`, `developer-senior`, `developer-manager`, `developer-code-quality`.
 
 ### 12.2 Per-ticket prompts (T1–T24)
 
-**Closure convention:** **`DONE yyyy-mm-dd`** closes a prompt for execution tracking; the **Skills** / **Verify** lines remain useful for regressions or for agents picking up partial work—no need to delete completed cards unless the task is superseded.
+**Closure convention:** `**DONE yyyy-mm-dd`** closes a prompt for execution tracking; the **Skills** / **Verify** lines remain useful for regressions or for agents picking up partial work—no need to delete completed cards unless the task is superseded.
 
 #### Prompt T1 — Shared Zod contracts for memory, media, errors, pagination
 
@@ -404,6 +404,8 @@ Implement `POST /api/v1/clients/:clientId/memories` with **Idempotency-Key**, se
 
 **Verify:** Replay same key → same `memory_id`; exceeding media limits → 400.
 
+DONE 2026-04-30
+
 ---
 
 #### Prompt T9 — List, detail, patch, delete
@@ -413,6 +415,8 @@ Implement cursor list, detail with media descriptors, patch allowed fields, soft
 **Skills to read first:** `developer-backend`, `developer-database`.
 
 **Verify:** Pagination tests; patch authz roles per Appendix A baseline.
+
+DONE 2026-04-30
 
 ---
 
@@ -562,7 +566,7 @@ Implement API routes + persistence for **comments/reactions** per [technical-des
 
 **Gate:** **T23** merged or waived by PM **and** `**sharing_visibility`** semantics signed off.
 
-Persist and enforce `**sharing_visibility**` end-to-end (API validation + UI when product requires). Document default for legacy rows.
+Persist and enforce `**sharing_visibility`** end-to-end (API validation + UI when product requires). Document default for legacy rows.
 
 **Skills to read first:** `developer-backend`, `developer-frontend-ui`, `developer-database`, `developer-security`.
 
@@ -572,7 +576,7 @@ Persist and enforce `**sharing_visibility**` end-to-end (API validation + UI whe
 
 ### 12.3 Standard test commands
 
-Workspaces use `**@memories/web`** and `**@memories/api**` (see root `package.json`).
+Workspaces use `**@memories/web`** and `**@memories/api`** (see root `package.json`).
 
 1. `npm run lint`
 2. `npm run typecheck`
@@ -598,23 +602,23 @@ Workspaces use `**@memories/web`** and `**@memories/api**` (see root `package.js
 **How to use this matrix:** Rows are ordered **roughly** by dependency (API spine → signing → CRUD → web shell → capture → hardening). **Related tickets** names every ticket whose work the **Steps** assume; treat the row as **runnable and sign-offable only after all** of those tickets are merged (for example **T4,T9** needs list/detail routes from **T9**, not authz alone from **T4**). **Sign off** in the **Sign-off** column when **Steps** pass in a suitable environment (local, staging, or ephemeral). **Stage 0.5** production still requires **every** **0.5** row below **and** the **T22** release checklist—not only the capture row. Rows without **T10**–**T12** may use **REST** or **curl** / API client plus seeded or synthetic JWTs; **T10**+ rows exercise the browser.
 
 
-| Epic      | Scenario                                 | Related tickets | Steps                                                                                             | Expected result                                   | Sign-off      |
-| --------- | ---------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------------- |
-| **0.5**   | Protected routes reject bad / missing JWT | T3             | Omit `Authorization` or send malformed token on a protected `/api/v1/…` route; call `/health` without auth | Protected routes rejected per contract; `/health` 200 | Manual / date |
-| **0.5**   | API `client_id` / memory authz (403)      | T4,T9          | Valid JWT; `GET` list or `GET` detail for another tenant’s `client_id` or unrelated `memory_id`    | **403**; error body has no PHI (**NFR-008**)       | Manual / date |
-| **0.5**   | Image + audio **upload** sign URLs       | T5,T6          | `POST` sign endpoints; exercise oversize / disallowed MIME where safe                               | Policy enforced; URLs usable only for intended upload | Manual / date |
-| **0.5**   | Finalize idempotency + **0.5** media caps | T8            | Same **Idempotency-Key** twice; attempt finalize with >1 image or >1 audio                         | Same `memory_id` on replay; **400** on cap breach  | Manual / date |
-| **0.5**   | List, detail, **PATCH**, soft **DELETE** | T9             | Cursor list, detail with media refs, allowed **PATCH**, **DELETE**                                | Contract + audit behavior per TDD; soft delete visible in list | Manual / date |
-| **0.5**   | Playback **sign-read**                   | T7,T9          | `POST` sign-read for allowed `mediaId`; repeat for media outside caller’s scope                   | Time-limited read URL for allowed; **403** for denied | Manual / date |
-| **0.5**   | Web list + detail + playback             | T10,T7,T9      | With test JWT: open list → detail → start playback (memory may be created via API or prior seed) | Playback works; empty/loading/error states sane  | Manual / date |
-| **0.5**   | Web cross-client isolation               | T4,T10         | As user A, open user B’s `client_id` route (deep link or tampered segment)                        | **403** or safe blocked UX; no other tenant data   | Manual / date |
-| **0.5**   | Ops smoke: `/health` + log spot-check     | T13            | `GET /health`; trigger sample traffic; inspect log fields                                         | **200**; structured logs; no PHI in payloads (**NFR-008**) | Manual / date |
-| **0.5**   | Guided capture saves one memory          | T11,T12,T14     | Complete photo → meta → record → save; airplane mode mid-save → resume                            | Exactly one DB row; playback works                | Manual / date |
-| **0.6**   | Multiple photos                          | T15             | Attach 3 images reorder                                                                           | Ordering persisted                                | Manual / date |
-| **0.7**   | Upload audio file                        | T16             | Pick file, save                                                                                   | Playback matches record path                      | Manual / date |
-| **0.8**   | Transcription                            | T17,T18         | Record audio; poll until ready                                                                    | Text appears; failures readable                   | Manual / date |
-| **0.9**   | Video                                    | T19             | Capture short clip                                                                                | Playback OK on target devices                     | Manual / date |
-| **Later** | **FR-017** / **FR-018** (when unblocked) | T23,T24         | Role-appropriate comment add/read; denial for wrong role; set visibility → family sees per policy | Matches Appendix A + PRD; no PHI in notifications | Manual / date |
+| Epic      | Scenario                                  | Related tickets | Steps                                                                                                      | Expected result                                                | Sign-off      |
+| --------- | ----------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | ------------- |
+| **0.5**   | Protected routes reject bad / missing JWT | T3              | Omit `Authorization` or send malformed token on a protected `/api/v1/…` route; call `/health` without auth | Protected routes rejected per contract; `/health` 200          | Ken 4/30      |
+| **0.5**   | API `client_id` / memory authz (403)      | T4,T9           | Valid JWT; `GET` list or `GET` detail for another tenant’s `client_id` or unrelated `memory_id`            | **403**; error body has no PHI (**NFR-008**)                   | Ken 4/30      |
+| **0.5**   | Image + audio **upload** sign URLs        | T5,T6           | `POST` sign endpoints; exercise oversize / disallowed MIME where safe                                      | Policy enforced; URLs usable only for intended upload          | Manual / date |
+| **0.5**   | Finalize idempotency + **0.5** media caps | T8              | Same **Idempotency-Key** twice; attempt finalize with >1 image or >1 audio                                 | Same `memory_id` on replay; **400** on cap breach              | Manual / date |
+| **0.5**   | List, detail, **PATCH**, soft **DELETE**  | T9              | Cursor list, detail with media refs, allowed **PATCH**, **DELETE**                                         | Contract + audit behavior per TDD; soft delete visible in list | Manual / date |
+| **0.5**   | Playback **sign-read**                    | T7,T9           | `POST` sign-read for allowed `mediaId`; repeat for media outside caller’s scope                            | Time-limited read URL for allowed; **403** for denied          | Manual / date |
+| **0.5**   | Web list + detail + playback              | T10,T7,T9       | With test JWT: open list → detail → start playback (memory may be created via API or prior seed)           | Playback works; empty/loading/error states sane                | Manual / date |
+| **0.5**   | Web cross-client isolation                | T4,T10          | As user A, open user B’s `client_id` route (deep link or tampered segment)                                 | **403** or safe blocked UX; no other tenant data               | Manual / date |
+| **0.5**   | Ops smoke: `/health` + log spot-check     | T13             | `GET /health`; trigger sample traffic; inspect log fields                                                  | **200**; structured logs; no PHI in payloads (**NFR-008**)     | Manual / date |
+| **0.5**   | Guided capture saves one memory           | T11,T12,T14     | Complete photo → meta → record → save; airplane mode mid-save → resume                                     | Exactly one DB row; playback works                             | Manual / date |
+| **0.6**   | Multiple photos                           | T15             | Attach 3 images reorder                                                                                    | Ordering persisted                                             | Manual / date |
+| **0.7**   | Upload audio file                         | T16             | Pick file, save                                                                                            | Playback matches record path                                   | Manual / date |
+| **0.8**   | Transcription                             | T17,T18         | Record audio; poll until ready                                                                             | Text appears; failures readable                                | Manual / date |
+| **0.9**   | Video                                     | T19             | Capture short clip                                                                                         | Playback OK on target devices                                  | Manual / date |
+| **Later** | **FR-017** / **FR-018** (when unblocked)  | T23,T24         | Role-appropriate comment add/read; denial for wrong role; set visibility → family sees per policy          | Matches Appendix A + PRD; no PHI in notifications              | Manual / date |
 
 
 **Pre-review code quality (applies across epics):** read `.cursor/skills/developer-code-quality/SKILL.md` before marking review-ready.
@@ -627,7 +631,7 @@ PR merges that touch `**apps/web`** capture, list, or detail layouts should keep
 | Requirement         | Detail                                                                                                                                                                                                                                                         |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Smoke paths**     | Short flows on **viewport-sized** Chromium + WebKit projects: open list → FAB → capture **0.5** golden path steps through save (stub auth / test JWT as implemented).                                                                                          |
-| **PR gate**         | Run Playwright **device/emulation profiles** covering **mobile Chrome** and **mobile Safari** class behavior (repo naming may vary—e.g. `**mobile-chrome`** + `**webkit**` / `**mobile-safari**` projects). Both must pass before merge when UI paths changed. |
+| **PR gate**         | Run Playwright **device/emulation profiles** covering **mobile Chrome** and **mobile Safari** class behavior (repo naming may vary—e.g. `**mobile-chrome`** + `**webkit`** / `**mobile-safari`** projects). Both must pass before merge when UI paths changed. |
 | **Artifacts**       | On failure, attach **trace / HTML report** paths to the PR (see `**developer-testing`**).                                                                                                                                                                      |
 | **Full regression** | Broader matrix (tablet, rotate, flaky network) **nightly** or **pre-release**, per team capacity—not every PR.                                                                                                                                                 |
 
@@ -637,12 +641,12 @@ PR merges that touch `**apps/web`** capture, list, or detail layouts should keep
 ## 13. Revision history
 
 
-| Version | Notes                                                                                                                                                                                                                                        |
-| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1.0     | Initial staged development plan (**0.5** prod slice → **1.0**); aligns to PRD v1.2 + TDD v1.2.                                                                                                                                               |
-| 1.1     | Align linked-input versions (**PRD/TDD v1.3**); fix epic numbering (**E7–E11**); clarify **FR-017** / **FR-018**; trace **NFR-001**, **NFR-004**, **NFR-007**; add **§12.6** mobile standard; tighten quality gates (**§12.5–§12.6**, a11y). |
-| 1.2     | **§5.1** NFR-010 alerting starters; **E12** + **T23**/**T24** + Definition of ready; **§12.1** session-default vs lean **Skills** (developer-manager alignment); prompts **T23–T24**; **§12.4–12.5** **E12** / Later scenarios.              |
-| 1.3     | **§12.2** heading **T1–T24**; Session defaults ↔ **§12.5** (template alignment); template cross-refs (**§12.2** prompts, **§12.5** code-quality tie) synced with `**development-plan-template`** + `**development-planner**`.                |
+| Version | Notes                                                                                                                                                                                                                                                             |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.0     | Initial staged development plan (**0.5** prod slice → **1.0**); aligns to PRD v1.2 + TDD v1.2.                                                                                                                                                                    |
+| 1.1     | Align linked-input versions (**PRD/TDD v1.3**); fix epic numbering (**E7–E11**); clarify **FR-017** / **FR-018**; trace **NFR-001**, **NFR-004**, **NFR-007**; add **§12.6** mobile standard; tighten quality gates (**§12.5–§12.6**, a11y).                      |
+| 1.2     | **§5.1** NFR-010 alerting starters; **E12** + **T23**/**T24** + Definition of ready; **§12.1** session-default vs lean **Skills** (developer-manager alignment); prompts **T23–T24**; **§12.4–12.5** **E12** / Later scenarios.                                   |
+| 1.3     | **§12.2** heading **T1–T24**; Session defaults ↔ **§12.5** (template alignment); template cross-refs (**§12.2** prompts, **§12.5** code-quality tie) synced with `**development-plan-template`** + `**development-planner`**.                                     |
 | 1.5     | **§12.5** expanded **0.5** manual matrix (incremental API/web/ops rows + execution note); **§8** manual-scenario bullet aligned; **§12.5** intro clarifies sign-off vs stage gate and **Related tickets** = **all** merged before a row is runnable/sign-offable. |
 
 

@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { randomUUID } from "node:crypto";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { SignJWT, exportJWK, generateKeyPair, type JWTPayload } from "jose";
 import { buildApp } from "./app.js";
@@ -90,6 +91,53 @@ describe("api auth shell", () => {
       },
     ],
   ]);
+  const memoriesById = new Map<
+    string,
+    {
+      memoryId: string;
+      practiceId: string;
+      clientId: string;
+      title: string;
+      room: string | null;
+      body: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+      deletedAt: Date | null;
+    }
+  >();
+  const mediaByMemoryId = new Map<
+    string,
+    Array<{
+      mediaId: string;
+      memoryId: string;
+      type: "image" | "audio" | "video";
+      storageKey: string;
+      mimeType: string;
+      byteSize: number;
+      sortOrder: number;
+      createdAt: Date;
+    }>
+  >();
+  const idempotencyToMemoryId = new Map<string, string>();
+
+  function getMemoryDetail(memoryId: string) {
+    const memory = memoriesById.get(memoryId);
+    if (!memory || memory.deletedAt) {
+      return null;
+    }
+    const media = (mediaByMemoryId.get(memoryId) ?? []).slice().sort((a, b) => {
+      if (a.sortOrder !== b.sortOrder) {
+        return a.sortOrder - b.sortOrder;
+      }
+      return a.createdAt.getTime() - b.createdAt.getTime();
+    });
+
+    return {
+      memory,
+      media,
+      transcript: null,
+    };
+  }
 
   beforeAll(async () => {
     const keyPair = await generateKeyPair("RS256");
@@ -129,6 +177,177 @@ describe("api auth shell", () => {
         readUrl: signedPlaybackReadUrl,
         expiresAt: "2026-05-01T00:00:00.000Z",
       }),
+      memoryRepository: {
+        finalizeMemory: async ({
+          practiceId,
+          clientId,
+          actorUserId,
+          idempotencyKey,
+          title,
+          room,
+          body,
+          media,
+        }) => {
+          const idempotencyMapKey = `${practiceId}|${clientId}|${actorUserId}|${idempotencyKey}`;
+          const existingMemoryId = idempotencyToMemoryId.get(idempotencyMapKey);
+          if (existingMemoryId) {
+            const existing = getMemoryDetail(existingMemoryId);
+            if (!existing) {
+              throw new Error("Expected existing memory for idempotent replay.");
+            }
+            return existing;
+          }
+
+          const memoryId = randomUUID();
+          const now = new Date();
+          memoriesById.set(memoryId, {
+            memoryId,
+            practiceId,
+            clientId,
+            title,
+            room,
+            body,
+            createdAt: now,
+            updatedAt: now,
+            deletedAt: null,
+          });
+          mediaByMemoryId.set(
+            memoryId,
+            media.map((item) => ({
+              mediaId: item.mediaId,
+              memoryId,
+              type: item.type,
+              storageKey: item.storageKey,
+              mimeType: item.mimeType,
+              byteSize: item.byteSize,
+              sortOrder: item.sortOrder,
+              createdAt: new Date(now.getTime() + item.sortOrder),
+            })),
+          );
+          idempotencyToMemoryId.set(idempotencyMapKey, memoryId);
+
+          for (const item of media) {
+            playbackMediaById.set(item.mediaId, {
+              mediaId: item.mediaId,
+              memoryId,
+              practiceId,
+              clientId,
+              storageKey: item.storageKey,
+              mimeType: item.mimeType,
+            });
+          }
+
+          const created = getMemoryDetail(memoryId);
+          if (!created) {
+            throw new Error("Expected created memory detail.");
+          }
+          return created;
+        },
+        listMemories: async ({ practiceId, clientId, pageSize, cursor }) => {
+          const sorted = [...memoriesById.values()]
+            .filter(
+              (item) =>
+                !item.deletedAt && item.practiceId === practiceId && item.clientId === clientId,
+            )
+            .sort((a, b) => {
+              const byCreatedAt = b.createdAt.getTime() - a.createdAt.getTime();
+              if (byCreatedAt !== 0) {
+                return byCreatedAt;
+              }
+              return b.memoryId.localeCompare(a.memoryId);
+            });
+
+          const filtered = cursor
+            ? sorted.filter((item) => {
+                const itemCreatedAt = item.createdAt.toISOString();
+                if (itemCreatedAt < cursor.createdAtIso) {
+                  return true;
+                }
+                if (itemCreatedAt > cursor.createdAtIso) {
+                  return false;
+                }
+                return item.memoryId < cursor.memoryId;
+              })
+            : sorted;
+
+          const page = filtered.slice(0, pageSize);
+          const hasMore = filtered.length > pageSize;
+          return {
+            items: page,
+            nextCursor:
+              hasMore && page.length > 0
+                ? `${page[page.length - 1]!.createdAt.toISOString()}|${page[page.length - 1]!.memoryId}`
+                : null,
+          };
+        },
+        listThumbnailMediaIds: async (memoryIds) => {
+          const map = new Map<string, string | null>();
+          for (const memoryId of memoryIds) {
+            const memoryMedia = (mediaByMemoryId.get(memoryId) ?? []).slice().sort((a, b) => {
+              if (a.sortOrder !== b.sortOrder) {
+                return a.sortOrder - b.sortOrder;
+              }
+              return a.createdAt.getTime() - b.createdAt.getTime();
+            });
+            const thumbnail = memoryMedia.find((item) => item.type === "image");
+            map.set(memoryId, thumbnail?.mediaId ?? null);
+          }
+          return map;
+        },
+        getMemoryDetail: async ({ memoryId, clientId, practiceId }) => {
+          const detail = getMemoryDetail(memoryId);
+          if (!detail) {
+            return null;
+          }
+          if (
+            detail.memory.clientId !== clientId ||
+            detail.memory.practiceId !== practiceId ||
+            detail.memory.deletedAt
+          ) {
+            return null;
+          }
+          return detail;
+        },
+        updateMemory: async ({ memoryId, practiceId, clientId, patch }) => {
+          const existing = memoriesById.get(memoryId);
+          if (
+            !existing ||
+            existing.deletedAt ||
+            existing.practiceId !== practiceId ||
+            existing.clientId !== clientId
+          ) {
+            return null;
+          }
+
+          const updated = {
+            ...existing,
+            title: patch.title ?? existing.title,
+            room: patch.room !== undefined ? patch.room : existing.room,
+            body: patch.body !== undefined ? patch.body : existing.body,
+            updatedAt: new Date(),
+          };
+          memoriesById.set(memoryId, updated);
+          return getMemoryDetail(memoryId);
+        },
+        softDeleteMemory: async ({ memoryId, practiceId, clientId }) => {
+          const existing = memoriesById.get(memoryId);
+          if (
+            !existing ||
+            existing.deletedAt ||
+            existing.practiceId !== practiceId ||
+            existing.clientId !== clientId
+          ) {
+            return false;
+          }
+
+          memoriesById.set(memoryId, {
+            ...existing,
+            deletedAt: new Date(),
+            updatedAt: new Date(),
+          });
+          return true;
+        },
+      },
     });
 
     app.get("/api/v1/test/clients/:clientId/memories", async (request) => {
@@ -573,5 +792,296 @@ describe("api auth shell", () => {
     const body = JSON.parse(res.body) as { code: string; request_id: string };
     expect(body.code).toBe("FORBIDDEN");
     expect(body.request_id).toBe("req-playback-denied");
+  });
+
+  it("replays finalize create by idempotency key with the same memory id", async () => {
+    const clientId = "154f0bd6-bcdf-43b7-9f8f-fc2de7b59fe4";
+    const token = await createToken({
+      user_id: "a3f1a2a8-cf05-4794-a521-fb8bd7f06745",
+      practice_id: "f4cc930e-f9db-4a35-b4d2-e4f9f6f05704",
+      client_id: clientId,
+      roles: ["GUIDE"],
+    });
+
+    const payload = {
+      title: "Grandma story",
+      room: "Room 101",
+      body: "A short memory",
+      media: [
+        {
+          media_id: randomUUID(),
+          type: "image",
+          storage_key: "f4cc/uploads/images/1",
+          mime_type: "image/jpeg",
+          byte_size: 120_000,
+          sort_order: 0,
+        },
+        {
+          media_id: randomUUID(),
+          type: "audio",
+          storage_key: "f4cc/uploads/audio/1",
+          mime_type: "audio/webm",
+          byte_size: 220_000,
+          sort_order: 1,
+        },
+      ],
+    };
+
+    const first = await app.inject({
+      method: "POST",
+      url: `/api/v1/clients/${clientId}/memories`,
+      headers: {
+        authorization: `Bearer ${token}`,
+        "idempotency-key": "idem-t8-replay",
+      },
+      payload,
+    });
+    const second = await app.inject({
+      method: "POST",
+      url: `/api/v1/clients/${clientId}/memories`,
+      headers: {
+        authorization: `Bearer ${token}`,
+        "idempotency-key": "idem-t8-replay",
+      },
+      payload,
+    });
+
+    expect(first.statusCode).toBe(200);
+    expect(second.statusCode).toBe(200);
+    const firstBody = JSON.parse(first.body) as { memory: { memory_id: string } };
+    const secondBody = JSON.parse(second.body) as { memory: { memory_id: string } };
+    expect(secondBody.memory.memory_id).toBe(firstBody.memory.memory_id);
+  });
+
+  it("returns 400 when finalize includes more than one image", async () => {
+    const clientId = "f2e22495-16e5-414f-9b15-9f1f1669a56f";
+    const token = await createToken({
+      user_id: "3c5ea224-0b96-4e94-b29f-768de7be2afb",
+      practice_id: "77190dae-84bf-4a2f-b7f4-65073b26122b",
+      client_id: clientId,
+      roles: ["GUIDE"],
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/v1/clients/${clientId}/memories`,
+      headers: {
+        authorization: `Bearer ${token}`,
+        "idempotency-key": "idem-t8-too-many-images",
+      },
+      payload: {
+        title: "Too many photos",
+        media: [
+          {
+            media_id: randomUUID(),
+            type: "image",
+            storage_key: "uploads/images/a",
+            mime_type: "image/png",
+            byte_size: 100_000,
+          },
+          {
+            media_id: randomUUID(),
+            type: "image",
+            storage_key: "uploads/images/b",
+            mime_type: "image/png",
+            byte_size: 100_000,
+          },
+        ],
+      },
+    });
+
+    expect(res.statusCode).toBe(400);
+    const body = JSON.parse(res.body) as { code: string };
+    expect(body.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("paginates list responses with cursor semantics", async () => {
+    const clientId = "35b965e2-e888-4843-a3b7-c89ce33ea43f";
+    const practiceId = "099669f8-f597-4b5b-8fa6-611b3a7e704f";
+    const token = await createToken({
+      user_id: "f2b3192d-ab40-4f52-b2f5-7ef925a2074f",
+      practice_id: practiceId,
+      client_id: clientId,
+      roles: ["GUIDE"],
+    });
+
+    const firstCreate = await app.inject({
+      method: "POST",
+      url: `/api/v1/clients/${clientId}/memories`,
+      headers: {
+        authorization: `Bearer ${token}`,
+        "idempotency-key": "idem-list-1",
+      },
+      payload: {
+        title: "Old memory",
+        media: [
+          {
+            media_id: randomUUID(),
+            type: "audio",
+            storage_key: "uploads/audio/a",
+            mime_type: "audio/webm",
+            byte_size: 210_000,
+          },
+        ],
+      },
+    });
+    const secondCreate = await app.inject({
+      method: "POST",
+      url: `/api/v1/clients/${clientId}/memories`,
+      headers: {
+        authorization: `Bearer ${token}`,
+        "idempotency-key": "idem-list-2",
+      },
+      payload: {
+        title: "New memory",
+        media: [
+          {
+            media_id: randomUUID(),
+            type: "audio",
+            storage_key: "uploads/audio/b",
+            mime_type: "audio/webm",
+            byte_size: 220_000,
+          },
+        ],
+      },
+    });
+
+    expect(firstCreate.statusCode).toBe(200);
+    expect(secondCreate.statusCode).toBe(200);
+
+    const firstPage = await app.inject({
+      method: "GET",
+      url: `/api/v1/clients/${clientId}/memories?page_size=1`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(firstPage.statusCode).toBe(200);
+    const firstPageBody = JSON.parse(firstPage.body) as {
+      items: Array<{ memory_id: string }>;
+      next_cursor: string | null;
+    };
+    expect(firstPageBody.items).toHaveLength(1);
+    expect(firstPageBody.next_cursor).toBeTruthy();
+
+    const secondPage = await app.inject({
+      method: "GET",
+      url: `/api/v1/clients/${clientId}/memories?page_size=1&cursor=${encodeURIComponent(
+        firstPageBody.next_cursor as string,
+      )}`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(secondPage.statusCode).toBe(200);
+    const secondPageBody = JSON.parse(secondPage.body) as {
+      items: Array<{ memory_id: string }>;
+      next_cursor: string | null;
+    };
+    expect(secondPageBody.items).toHaveLength(1);
+    expect(secondPageBody.items[0]?.memory_id).not.toBe(firstPageBody.items[0]?.memory_id);
+  });
+
+  it("returns 403 for CLIENT_SELF patch attempts on memories", async () => {
+    const clientId = "2cffeb73-c94a-45b2-a920-4f318fe214d0";
+    const practiceId = "2013e8e7-2897-4cb1-a0ef-d8f958c5ee8f";
+    const guideToken = await createToken({
+      user_id: "f6b6f052-3c9e-4ec9-85c4-53ca0f7d44e4",
+      practice_id: practiceId,
+      client_id: clientId,
+      roles: ["GUIDE"],
+    });
+    const createRes = await app.inject({
+      method: "POST",
+      url: `/api/v1/clients/${clientId}/memories`,
+      headers: { authorization: `Bearer ${guideToken}`, "idempotency-key": "idem-patch-authz" },
+      payload: {
+        title: "Protected memory",
+        media: [
+          {
+            media_id: randomUUID(),
+            type: "audio",
+            storage_key: "uploads/audio/protected",
+            mime_type: "audio/webm",
+            byte_size: 200_000,
+          },
+        ],
+      },
+    });
+    expect(createRes.statusCode).toBe(200);
+    const created = JSON.parse(createRes.body) as { memory: { memory_id: string } };
+
+    const clientSelfToken = await createToken({
+      user_id: "e7c82a7f-bf06-467d-975e-87d9e594d0d6",
+      practice_id: practiceId,
+      client_id: clientId,
+      roles: ["CLIENT_SELF"],
+    });
+    const patchRes = await app.inject({
+      method: "PATCH",
+      url: `/api/v1/clients/${clientId}/memories/${created.memory.memory_id}`,
+      headers: { authorization: `Bearer ${clientSelfToken}` },
+      payload: { title: "Client self edit" },
+    });
+
+    expect(patchRes.statusCode).toBe(403);
+    const body = JSON.parse(patchRes.body) as { code: string };
+    expect(body.code).toBe("FORBIDDEN");
+  });
+
+  it("patches and soft-deletes memory for guide role", async () => {
+    const clientId = "54e33851-c132-4fdf-ad5d-d4860bf215a6";
+    const practiceId = "13dc3f50-13f4-4f3e-a026-6af57a1ca14d";
+    const guideToken = await createToken({
+      user_id: "26abfdc6-b8f6-427e-b8f4-9f1f6f7f77ad",
+      practice_id: practiceId,
+      client_id: clientId,
+      roles: ["GUIDE"],
+    });
+
+    const createRes = await app.inject({
+      method: "POST",
+      url: `/api/v1/clients/${clientId}/memories`,
+      headers: { authorization: `Bearer ${guideToken}`, "idempotency-key": "idem-patch-delete" },
+      payload: {
+        title: "Update me",
+        media: [
+          {
+            media_id: randomUUID(),
+            type: "audio",
+            storage_key: "uploads/audio/update-me",
+            mime_type: "audio/webm",
+            byte_size: 200_000,
+          },
+        ],
+      },
+    });
+    expect(createRes.statusCode).toBe(200);
+    const created = JSON.parse(createRes.body) as { memory: { memory_id: string } };
+    const memoryId = created.memory.memory_id;
+
+    const patchRes = await app.inject({
+      method: "PATCH",
+      url: `/api/v1/clients/${clientId}/memories/${memoryId}`,
+      headers: { authorization: `Bearer ${guideToken}` },
+      payload: {
+        title: "Updated title",
+        room: "Living room",
+      },
+    });
+    expect(patchRes.statusCode).toBe(200);
+    const patched = JSON.parse(patchRes.body) as { memory: { title: string; room: string | null } };
+    expect(patched.memory.title).toBe("Updated title");
+    expect(patched.memory.room).toBe("Living room");
+
+    const deleteRes = await app.inject({
+      method: "DELETE",
+      url: `/api/v1/clients/${clientId}/memories/${memoryId}`,
+      headers: { authorization: `Bearer ${guideToken}` },
+    });
+    expect(deleteRes.statusCode).toBe(204);
+
+    const detailAfterDelete = await app.inject({
+      method: "GET",
+      url: `/api/v1/clients/${clientId}/memories/${memoryId}`,
+      headers: { authorization: `Bearer ${guideToken}` },
+    });
+    expect(detailAfterDelete.statusCode).toBe(404);
   });
 });

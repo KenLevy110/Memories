@@ -24,13 +24,23 @@ npm install
 npm run db:prepare
 ```
 
-Copy `.env.example` to `.env` and adjust. In one terminal start the API, in another the web app:
+Copy `.env.example` to `.env` and adjust (including **JWT_*** — the API will not start without them).
+
+**Local JWT without your real IdP:** `.env.example` defaults match the built-in helper. In **one** terminal run:
 
 ```bash
-npm run dev:api
-# other terminal
-npm run dev:web
+npm run dev:local-auth
 ```
+
+Leave it running. It listens on **127.0.0.1:3010** only, serves JWKS, and can mint a dev token at `http://127.0.0.1:3010/dev/token`. Then start the stack:
+
+```bash
+npm run dev
+```
+
+If the API still exits, confirm `.env` contains **`JWT_ISSUER`**, **`JWT_AUDIENCE`**, and **`JWT_JWKS_URI`** (the helper prints the exact lines). Production uses your platform issuer instead of this helper.
+
+To run only one app (for example a second terminal is already running the other), use `npm run dev:api` or `npm run dev:web`.
 
 - Web: default Vite URL (e.g. `http://localhost:5173`)
 - API: `http://localhost:3000` — try `GET /health`
@@ -45,6 +55,8 @@ npm run dev:web
 
 | Script | Description |
 | --- | --- |
+| `npm run dev` | API + web in one terminal ([`concurrently`](https://www.npmjs.com/package/concurrently); prefixed logs `api` / `web`) |
+| `npm run dev:local-auth` | Localhost JWKS + `/dev/token` mint (**127.0.0.1** only; run alongside `npm run dev` until you wire a real IdP) |
 | `npm run dev:web` | Vite dev server for `apps/web` |
 | `npm run dev:api` | API with hot reload (`tsx watch`) |
 | `npm run db:dev:setup` | Provision/start hardened local PostgreSQL cluster and set DB URLs in `.env` when missing (Windows) |

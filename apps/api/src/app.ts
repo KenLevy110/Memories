@@ -477,13 +477,23 @@ function requirePracticeIdForProtectedRoute(request: {
 }
 
 function resolveJwtAuthConfig(options?: BuildAppOptions): JwtAuthConfig {
-  const issuer = options?.jwtAuth?.issuer ?? process.env["JWT_ISSUER"];
-  const audience = options?.jwtAuth?.audience ?? process.env["JWT_AUDIENCE"];
-  const jwksUri = options?.jwtAuth?.jwksUri ?? process.env["JWT_JWKS_URI"];
+  const issuerRaw = options?.jwtAuth?.issuer ?? process.env["JWT_ISSUER"];
+  const audienceRaw = options?.jwtAuth?.audience ?? process.env["JWT_AUDIENCE"];
+  const jwksUriRaw = options?.jwtAuth?.jwksUri ?? process.env["JWT_JWKS_URI"];
 
-  if (!issuer || !audience || !jwksUri) {
+  const issuer = typeof issuerRaw === "string" ? issuerRaw.trim() : "";
+  const audience = typeof audienceRaw === "string" ? audienceRaw.trim() : "";
+  const jwksUri = typeof jwksUriRaw === "string" ? jwksUriRaw.trim() : "";
+
+  const missing: string[] = [];
+  if (!issuer) missing.push("JWT_ISSUER");
+  if (!audience) missing.push("JWT_AUDIENCE");
+  if (!jwksUri) missing.push("JWT_JWKS_URI");
+
+  if (missing.length > 0) {
     throw new Error(
-      "Missing JWT auth config. Set JWT_ISSUER, JWT_AUDIENCE, and JWT_JWKS_URI.",
+      `Missing JWT auth config: ${missing.join(", ")}. Set these in the repo root .env (see .env.example), ` +
+        `or run a local JWKS helper from the repo root: npm run dev:local-auth — then copy the printed values into .env (README Quick start).`,
     );
   }
 

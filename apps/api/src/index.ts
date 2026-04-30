@@ -3,9 +3,10 @@ import { fileURLToPath } from "node:url";
 import { config as loadEnv } from "dotenv";
 import { buildApp } from "./app.js";
 
+// `import.meta.url` is `.../apps/api/src/index.ts` (or `.../dist/index.js`); go up to monorepo root for `.env`.
 const monorepoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
-  "../..",
+  "../../..",
 );
 loadEnv({ path: path.join(monorepoRoot, ".env") });
 

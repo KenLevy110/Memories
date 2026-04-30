@@ -36,6 +36,21 @@ Each entry should include:
 
 ## Entries
 
+### 2026-04-30 - Fix API `.env` path (monorepo root)
+
+- **Area:** API
+- **Summary:** **`apps/api/src/index.ts`** loaded **`.env`** from **`apps/`** (`../..` from `src/`) instead of the repo root, so **`JWT_*`** and other root vars were never applied when running **`npm run dev`** / **`dev:api`**. Resolved with **`../../..`** from **`src/`**.
+- **Touched:** `apps/api/src/index.ts`, `docs/implementation-log.md`
+- **Validation:** `npm run test -w @memories/api`
+
+### 2026-04-30 - Local JWT dev helper and clearer API startup errors
+
+- **Area:** API, Docs, Infra (local DX)
+- **Summary:** **`@memories/api`** now reports **which** of **`JWT_ISSUER` / `JWT_AUDIENCE` / `JWT_JWKS_URI`** are missing when startup fails. Added **`npm run dev:local-auth`** (root) / **`apps/api/scripts/local-auth-dev.ts`**: **127.0.0.1**-only JWKS + **`GET /dev/token`** for short-lived dev JWTs. **`.env.example`** documents defaults aligned with that helper; **README** and **AGENTS** describe the two-terminal flow with **`npm run dev`**.
+- **Touched:** `apps/api/src/app.ts`, `apps/api/scripts/local-auth-dev.ts`, `apps/api/package.json`, root `package.json`, `.env.example`, `README.md`, `AGENTS.md`, `docs/implementation-log.md`
+- **Validation:** `npm run test -w @memories/api`; `npm run typecheck -w @memories/api`
+- **Follow-ups:** Replace helper with platform IdP in staging/prod; do not expose **`dev:local-auth`** beyond localhost.
+
 ### 2026-04-30 - Development plan coordination (§5.1, E12/T23–T24, Skills policy)
 
 - **Area:** Docs

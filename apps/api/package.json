@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "cross-env LOG_LEVEL=warn tsx watch src/index.ts",
+    "dev:local-auth": "tsx scripts/local-auth-dev.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "db:generate": "drizzle-kit generate --config=drizzle.config.ts",

@@ -36,6 +36,7 @@ These three themes apply to every initiative; specifics live in the rules above,
 ## Commands and validation
 
 - Install dependencies: `npm install` (or the package manager this repo uses).
+- Run API + web locally: `npm run dev` (root); or `npm run dev:api` / `npm run dev:web` separately. For local JWT without a platform IdP, run `npm run dev:local-auth` in a second terminal (see root `README.md`).
 - Run all tests: `npm run test`
 - Run full CI-equivalent checks: `npm run lint`, `npm run typecheck`, and the project’s CI test scripts
 

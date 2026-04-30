@@ -2,6 +2,10 @@ import { createHash, randomUUID } from "node:crypto";
 import Fastify from "fastify";
 import { apiErrorSchema, healthResponseSchema } from "@memories/shared";
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
+import { and, eq, isNull } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
+import { memories, memoryMedia } from "./db/schema.js";
 
 const logLevel =
   (process.env["LOG_LEVEL"] as
@@ -20,6 +24,7 @@ const CLIENT_SELF_ROLE = "CLIENT_SELF";
 const DEFAULT_IMAGE_UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
 const DEFAULT_AUDIO_UPLOAD_MAX_BYTES = 30 * 1024 * 1024;
 const DEFAULT_UPLOAD_URL_TTL_SECONDS = 5 * 60;
+const DEFAULT_PLAYBACK_URL_TTL_SECONDS = 5 * 60;
 const DEFAULT_UPLOAD_SIGN_ORIGIN = "https://uploads.memories.local";
 const ALLOWED_IMAGE_MIME_TYPES = new Set([
   "image/jpeg",
@@ -48,6 +53,8 @@ type BuildAppOptions = {
   imageUploadMaxBytes?: number;
   audioUploadMaxBytes?: number;
   uploadSigner?: UploadSigner;
+  mediaLookup?: MediaLookup;
+  playbackSigner?: PlaybackSigner;
 };
 
 type JwtVerifier = (token: string) => Promise<JWTPayload>;
@@ -62,6 +69,19 @@ type UploadSigner = (input: {
   storageKey: string;
   expiresAt: string;
   requiredHeaders: Record<string, string>;
+}>;
+type MediaLookupRecord = {
+  mediaId: string;
+  memoryId: string;
+  practiceId: string;
+  clientId: string;
+  storageKey: string;
+  mimeType: string;
+};
+type MediaLookup = (mediaId: string) => Promise<MediaLookupRecord | null>;
+type PlaybackSigner = (input: MediaLookupRecord) => Promise<{
+  readUrl: string;
+  expiresAt: string;
 }>;
 
 class HttpError extends Error {
@@ -139,7 +159,7 @@ function hashActorId(userId: string | null): string | null {
 
 function getPathParam(
   params: unknown,
-  paramName: "clientId" | "memoryId",
+  paramName: "clientId" | "memoryId" | "mediaId",
 ): string | null {
   if (!params || typeof params !== "object") {
     return null;
@@ -211,9 +231,31 @@ function enforceClientScopeAuthorization(request: {
     );
   }
 
+  if (!clientId) {
+    return;
+  }
+
+  enforceClientScopeForTargetClient(request, clientId, Boolean(memoryId));
+}
+
+function enforceClientScopeForTargetClient(
+  request: {
+    id: string;
+    method: string;
+    url: string;
+    auth: JWTPayload | null;
+    log: { warn: (payload: Record<string, unknown>, message: string) => void };
+  },
+  targetClientId: string,
+  memoryIdPresent: boolean,
+): void {
+  if (!request.auth) {
+    throw new HttpError(401, "UNAUTHORIZED", "Bearer token is required.");
+  }
+
   const practiceId = readStringClaim(request.auth, "practice_id");
   if (!practiceId) {
-    logAuthzDenied(request, "missing_practice_scope", clientId, Boolean(memoryId));
+    logAuthzDenied(request, "missing_practice_scope", targetClientId, memoryIdPresent);
     throw new HttpError(
       403,
       "FORBIDDEN",
@@ -222,8 +264,8 @@ function enforceClientScopeAuthorization(request: {
   }
 
   const clientScope = readClientScope(request.auth);
-  if (!clientId || clientScope.size === 0 || !clientScope.has(clientId)) {
-    logAuthzDenied(request, "client_scope_mismatch", clientId, Boolean(memoryId));
+  if (clientScope.size === 0 || !clientScope.has(targetClientId)) {
+    logAuthzDenied(request, "client_scope_mismatch", targetClientId, memoryIdPresent);
     throw new HttpError(
       403,
       "FORBIDDEN",
@@ -235,9 +277,9 @@ function enforceClientScopeAuthorization(request: {
   const focalClientId = readStringClaim(request.auth, "client_id");
   if (
     roles.has(CLIENT_SELF_ROLE) &&
-    (!focalClientId || focalClientId !== clientId || clientScope.size !== 1)
+    (!focalClientId || focalClientId !== targetClientId || clientScope.size !== 1)
   ) {
-    logAuthzDenied(request, "client_self_scope_mismatch", clientId, Boolean(memoryId));
+    logAuthzDenied(request, "client_self_scope_mismatch", targetClientId, memoryIdPresent);
     throw new HttpError(
       403,
       "FORBIDDEN",
@@ -319,6 +361,15 @@ function resolveUploadSignOrigin(): string {
   return DEFAULT_UPLOAD_SIGN_ORIGIN;
 }
 
+function resolvePlaybackSignOrigin(): string {
+  const fromEnv = process.env["PLAYBACK_SIGN_ORIGIN"];
+  if (fromEnv && fromEnv.trim().length > 0) {
+    return fromEnv.trim();
+  }
+
+  return resolveUploadSignOrigin();
+}
+
 function createDefaultUploadSigner(): UploadSigner {
   const origin = resolveUploadSignOrigin();
 
@@ -345,6 +396,75 @@ function createDefaultUploadSigner(): UploadSigner {
         "content-type": mimeType,
       },
     };
+  };
+}
+
+function createDefaultPlaybackSigner(): PlaybackSigner {
+  const origin = resolvePlaybackSignOrigin();
+
+  return async ({ storageKey, mimeType }) => {
+    const expiresAt = new Date(
+      Date.now() + DEFAULT_PLAYBACK_URL_TTL_SECONDS * 1000,
+    ).toISOString();
+    const url = new URL(
+      storageKey,
+      origin.endsWith("/") ? origin : `${origin}/`,
+    );
+    url.searchParams.set("expires_at", expiresAt);
+    url.searchParams.set("mime_type", mimeType);
+    url.searchParams.set("signature", randomUUID().replace(/-/g, ""));
+
+    return {
+      readUrl: url.toString(),
+      expiresAt,
+    };
+  };
+}
+
+function createDefaultMediaLookup(): {
+  lookup: MediaLookup;
+  close: (() => Promise<void>) | null;
+} {
+  const databaseUrl = process.env["DATABASE_URL"]?.trim();
+  if (!databaseUrl) {
+    return {
+      lookup: async () => null,
+      close: null,
+    };
+  }
+
+  const pool = new Pool({ connectionString: databaseUrl });
+  const db = drizzle(pool);
+
+  const lookup: MediaLookup = async (mediaId) => {
+    const rows = await db
+      .select({
+        mediaId: memoryMedia.id,
+        memoryId: memoryMedia.memoryId,
+        practiceId: memoryMedia.practiceId,
+        clientId: memoryMedia.clientId,
+        storageKey: memoryMedia.storageKey,
+        mimeType: memoryMedia.mimeType,
+      })
+      .from(memoryMedia)
+      .innerJoin(memories, eq(memories.id, memoryMedia.memoryId))
+      .where(
+        and(
+          eq(memoryMedia.id, mediaId),
+          isNull(memoryMedia.deletedAt),
+          isNull(memories.deletedAt),
+        ),
+      )
+      .limit(1);
+
+    return rows[0] ?? null;
+  };
+
+  return {
+    lookup,
+    close: async () => {
+      await pool.end();
+    },
   };
 }
 
@@ -553,6 +673,9 @@ export function buildApp(options?: BuildAppOptions) {
   const imageUploadMaxBytes = resolveImageUploadMaxBytes(options);
   const audioUploadMaxBytes = resolveAudioUploadMaxBytes(options);
   const uploadSigner = options?.uploadSigner ?? createDefaultUploadSigner();
+  const playbackSigner = options?.playbackSigner ?? createDefaultPlaybackSigner();
+  const defaultMediaLookup = options?.mediaLookup ? null : createDefaultMediaLookup();
+  const mediaLookup = options?.mediaLookup ?? defaultMediaLookup?.lookup;
 
   const app = Fastify({
     logger: {
@@ -570,6 +693,12 @@ export function buildApp(options?: BuildAppOptions) {
 
   app.decorateRequest("auth", null);
   app.decorateRequest("request_id", "");
+
+  if (defaultMediaLookup?.close) {
+    app.addHook("onClose", async () => {
+      await defaultMediaLookup.close?.();
+    });
+  }
 
   app.addHook("onRequest", async (request, reply) => {
     request.request_id = request.id;
@@ -711,6 +840,58 @@ export function buildApp(options?: BuildAppOptions) {
         "Audio upload signer unavailable.",
       );
       throw new HttpError(503, "SIGNER_UNAVAILABLE", "Unable to issue upload URL.");
+    }
+  });
+
+  app.post(`${API_PREFIX}/memory-media/:mediaId/sign-read`, async (request) => {
+    const mediaId = getPathParam(request.params, "mediaId");
+    if (!mediaId) {
+      throw new HttpError(400, "VALIDATION_ERROR", "mediaId path parameter is required.");
+    }
+
+    const practiceId = requirePracticeIdForProtectedRoute(request);
+
+    let mediaRecord: MediaLookupRecord | null = null;
+    try {
+      mediaRecord = mediaLookup ? await mediaLookup(mediaId) : null;
+    } catch (error) {
+      request.log.error(
+        { err: error, request_id: request.id },
+        "Playback media lookup unavailable.",
+      );
+      throw new HttpError(503, "LOOKUP_UNAVAILABLE", "Unable to resolve playback media.");
+    }
+
+    if (!mediaRecord) {
+      throw new HttpError(404, "NOT_FOUND", "Media not found.");
+    }
+
+    if (mediaRecord.practiceId !== practiceId) {
+      logAuthzDenied(request, "practice_scope_mismatch", mediaRecord.clientId, true);
+      throw new HttpError(
+        403,
+        "FORBIDDEN",
+        "Insufficient permissions for requested resource.",
+      );
+    }
+    enforceClientScopeForTargetClient(request, mediaRecord.clientId, true);
+
+    try {
+      const signed = await playbackSigner(mediaRecord);
+      return {
+        media_id: mediaRecord.mediaId,
+        memory_id: mediaRecord.memoryId,
+        read_url: signed.readUrl,
+        read_method: "GET" as const,
+        mime_type: mediaRecord.mimeType,
+        expires_at: signed.expiresAt,
+      };
+    } catch (error) {
+      request.log.error(
+        { err: error, request_id: request.id },
+        "Playback signer unavailable.",
+      );
+      throw new HttpError(503, "SIGNER_UNAVAILABLE", "Unable to issue read URL.");
     }
   });
 

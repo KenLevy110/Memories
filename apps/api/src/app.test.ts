@@ -58,6 +58,38 @@ describe("api auth shell", () => {
   let privateKey: Awaited<ReturnType<typeof generateKeyPair>>["privateKey"];
   const signedImageUploadUrl = "https://signed-upload.memories.test/put";
   const signedAudioUploadUrl = "https://signed-upload.memories.test/audio-put";
+  const signedPlaybackReadUrl = "https://signed-upload.memories.test/read";
+  const allowedPlaybackMediaId = "11111111-1111-4111-8111-111111111111";
+  const deniedPlaybackMediaId = "22222222-2222-4222-8222-222222222222";
+  const allowedPlaybackMemoryId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const deniedPlaybackMemoryId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+  const playbackPracticeId = "8e7ac795-5538-4dd7-9cbf-61fe8f0929bb";
+  const playbackClientId = "3f0f94b7-035f-4a62-98cc-28aedf34b4d2";
+  const hiddenClientId = "5d2ef2ef-4aa4-41e9-bd3b-fa007e81940b";
+  const playbackMediaById = new Map([
+    [
+      allowedPlaybackMediaId,
+      {
+        mediaId: allowedPlaybackMediaId,
+        memoryId: allowedPlaybackMemoryId,
+        practiceId: playbackPracticeId,
+        clientId: playbackClientId,
+        storageKey: `${playbackPracticeId}/memories/${allowedPlaybackMemoryId}/audio/${allowedPlaybackMediaId}`,
+        mimeType: "audio/webm",
+      },
+    ],
+    [
+      deniedPlaybackMediaId,
+      {
+        mediaId: deniedPlaybackMediaId,
+        memoryId: deniedPlaybackMemoryId,
+        practiceId: playbackPracticeId,
+        clientId: hiddenClientId,
+        storageKey: `${playbackPracticeId}/memories/${deniedPlaybackMemoryId}/audio/${deniedPlaybackMediaId}`,
+        mimeType: "audio/webm",
+      },
+    ],
+  ]);
 
   beforeAll(async () => {
     const keyPair = await generateKeyPair("RS256");
@@ -92,6 +124,11 @@ describe("api auth shell", () => {
           },
         };
       },
+      mediaLookup: async (mediaId) => playbackMediaById.get(mediaId) ?? null,
+      playbackSigner: async () => ({
+        readUrl: signedPlaybackReadUrl,
+        expiresAt: "2026-05-01T00:00:00.000Z",
+      }),
     });
 
     app.get("/api/v1/test/clients/:clientId/memories", async (request) => {
@@ -484,5 +521,57 @@ describe("api auth shell", () => {
     expect(res.statusCode).toBe(403);
     const body = JSON.parse(res.body) as { code: string };
     expect(body.code).toBe("FORBIDDEN");
+  });
+
+  it("returns signed read URL for media in caller scope", async () => {
+    const token = await createToken({
+      user_id: "2c71a5a7-3025-4a9a-ab11-4c91b1d4a2f9",
+      practice_id: playbackPracticeId,
+      client_id: playbackClientId,
+      roles: ["GUIDE"],
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/v1/memory-media/${allowedPlaybackMediaId}/sign-read`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body) as {
+      media_id: string;
+      memory_id: string;
+      read_url: string;
+      read_method: string;
+      mime_type: string;
+    };
+    expect(body.media_id).toBe(allowedPlaybackMediaId);
+    expect(body.memory_id).toBe(allowedPlaybackMemoryId);
+    expect(body.read_url).toBe(signedPlaybackReadUrl);
+    expect(body.read_method).toBe("GET");
+    expect(body.mime_type).toBe("audio/webm");
+  });
+
+  it("returns 403 when playback media is outside caller client scope", async () => {
+    const token = await createToken({
+      user_id: "db83fd9f-736e-4677-a6f9-e8cdacdcc1af",
+      practice_id: playbackPracticeId,
+      client_id: playbackClientId,
+      roles: ["GUIDE"],
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/v1/memory-media/${deniedPlaybackMediaId}/sign-read`,
+      headers: {
+        authorization: `Bearer ${token}`,
+        "x-request-id": "req-playback-denied",
+      },
+    });
+
+    expect(res.statusCode).toBe(403);
+    const body = JSON.parse(res.body) as { code: string; request_id: string };
+    expect(body.code).toBe("FORBIDDEN");
+    expect(body.request_id).toBe("req-playback-denied");
   });
 });

@@ -24,6 +24,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "@types/pg": "^8.20.0",
     "cross-env": "^7.0.3",
     "drizzle-kit": "^0.31.10",
     "tsx": "^4.0.0",

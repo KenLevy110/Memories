@@ -392,6 +392,8 @@ Implement `POST /api/v1/memory-media/:mediaId/sign-read` separate from upload si
 
 **Verify:** Forbidden when memory not visible to caller.
 
+DONE 2026-04-30
+
 ---
 
 #### Prompt T8 — Idempotent memory finalize (**0.5** limits)

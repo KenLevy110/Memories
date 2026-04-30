@@ -36,6 +36,13 @@ Each entry should include:
 
 ## Entries
 
+### 2026-04-30 - Playback sign-read endpoint (`T7`)
+
+- **Area:** API, Security
+- **Summary:** Implemented `POST /api/v1/memory-media/:mediaId/sign-read` with dedicated playback signing (separate from upload signing), scoped media lookup, and deny-by-default authz checks so callers only receive read URLs for media inside their allowed practice/client scope.
+- **Touched:** `apps/api/src/app.ts`, `apps/api/src/app.test.ts`, `apps/api/package.json`, `docs/development-plan-v1.md`, `docs/implementation-log.md`
+- **Validation:** `npm run typecheck --workspace=@memories/api`; `npm test --workspace=@memories/api`
+
 ### 2026-04-30 - Fix API `.env` path (monorepo root)
 
 - **Area:** API

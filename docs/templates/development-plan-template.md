@@ -8,7 +8,7 @@
 
 **How to fill:** Replace every placeholder and table cell. **Remove** linked-input rows (§2) for artifacts this repo does not use. **Do not** paste an entire prior product’s plan; derive tickets from the current PRD/TDD only.
 
-**Section 12:** Optional. Omit it if you track execution only in an issue tracker. If you include it, add **one** subsection per ticket in §6.2 using the pattern in §12.4.
+**Section 12:** Optional in this template alone; repositories using **AI-assisted prompts** normally **include** it. If you include it, add **one §12.2-style prompt block per ticket** from §6.2 (pattern in **§12.2**). Filled plans may also add **§12.6 Mobile automation standard** after **§12.5** when `apps/web` exists—see **`.cursor/skills/development-planner/SKILL.md`**.
 
 ---
 
@@ -76,6 +76,7 @@ Delete rows you do not maintain in this repository.
 - [Technical, product, or operational assumptions — bullets.]
 - [Constraints that bound sequencing or implementation choices.]
 
+You may add subsections (**### 5.1**, **### 5.2**, …) for artifacts that logically sit before work breakdown—for example starter **operations / alerting thresholds** keyed to observability requirements—without changing the numbering of **Sections 6–13**.
 
 ## 6. Work breakdown (epics and tickets)
 
@@ -141,7 +142,7 @@ Quality gates:
 - Before marking any ticket complete, update `docs/implementation-log.md` with the implementation delta (if this repo maintains that log).
 - If the ticket changes operator behavior or incident handling, update `docs/runbook.md` in the same PR (if maintained).
 - If a major architecture/security/data-contract decision is introduced, changed, or superseded, add/update an ADR in `docs/adr/` and reflect it in the ADR index.
-- **Structural code quality:** before requesting senior or peer review on a non-trivial change, read `.cursor/skills/developer-code-quality/SKILL.md` and pass its checklist. Tie this to the closing note under Section 12.3 when you add a manual matrix.
+- **Structural code quality:** before requesting senior or peer review on a non-trivial change, read `.cursor/skills/developer-code-quality/SKILL.md` and pass its checklist. Tie this to the closing note under **Section 12.5** when you maintain a manual test matrix (same closing note convention as §12 Session defaults below).
 
 
 ## 9. Rollout and operations
@@ -178,7 +179,7 @@ Use each prompt in order when executing with an implementation agent. Each promp
 ### Session defaults (read once per plan / branch execution)
 
 - **`developer-testing`** — Follow `.cursor/skills/developer-testing/SKILL.md` for every test run while executing this plan (temp-file output, polling, hang handling). Do **not** repeat it in each prompt's **Skills to read first** line unless a prompt is unusually test-runner-centric (e.g. stabilizing CI harness only).
-- **`developer-code-quality`** — Structural pass before requesting review: see §8 and the closing note under §12.3. Omit from per-prompt lists for the same reason as `developer-testing`.
+- **`developer-code-quality`** — Structural pass before requesting review: see **§8** and the closing note under **§12.5** (manual matrix). Omit from per-prompt lists for the same reason as `developer-testing`.
 - **Git / PRs:** Do **not** create branches, pushes, or pull requests on the host unless the human explicitly asks—see **`AGENTS.md` → AI-first delivery model**. Implement on the branch provided; humans open PRs.
 
 ### 12.1 Skill-reading convention (required per prompt)

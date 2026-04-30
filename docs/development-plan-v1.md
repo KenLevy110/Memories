@@ -13,7 +13,7 @@ For template structure and section intent, see [development-plan-template.md](te
 | Field | Value |
 | --- | --- |
 | **Title** | Memories — development plan |
-| **Version** | 1.2 |
+| **Version** | 1.3 |
 | **Author** | Ken Levy |
 | **Date** | 2026-04-30 |
 | **Status** | Draft |
@@ -275,7 +275,7 @@ Quality gates:
 ### Session defaults (read once per plan / branch execution)
 
 - **`developer-testing`** — Follow `.cursor/skills/developer-testing/SKILL.md` for test runs.
-- **`developer-code-quality`** — Structural pass before review (Section 8).
+- **`developer-code-quality`** — Structural pass before review (**Section 8**); aligns with closing note after **§12.5**.
 - **Git / PRs:** Do **not** create branches or PRs unless the human asks ([AGENTS.md](../AGENTS.md)).
 
 ### 12.1 Skill-reading convention (required per prompt)
@@ -286,7 +286,7 @@ Each prompt ends with **Skills to read first** naming `.cursor/skills/<name>/` f
 
 Repository skill folders include: `developer-backend`, `developer-database`, `developer-frontend-ui`, `developer-frontend-data-sync`, `developer-security`, `developer-unit-testing`, `developer-testing`, `developer-quality-assurance`, `developer-senior`, `developer-manager`, `developer-code-quality`.
 
-### 12.2 Per-ticket prompts (T1–T22)
+### 12.2 Per-ticket prompts (T1–T24)
 
 #### Prompt T1 — Shared Zod contracts for memory, media, errors, pagination
 
@@ -587,3 +587,4 @@ PR merges that touch **`apps/web`** capture, list, or detail layouts should keep
 | 1.0 | Initial staged development plan (**0.5** prod slice → **1.0**); aligns to PRD v1.2 + TDD v1.2. |
 | 1.1 | Align linked-input versions (**PRD/TDD v1.3**); fix epic numbering (**E7–E11**); clarify **FR-017** / **FR-018**; trace **NFR-001**, **NFR-004**, **NFR-007**; add **§12.6** mobile standard; tighten quality gates (**§12.5–§12.6**, a11y). |
 | 1.2 | **§5.1** NFR-010 alerting starters; **E12** + **T23**/**T24** + Definition of ready; **§12.1** session-default vs lean **Skills** (developer-manager alignment); prompts **T23–T24**; **§12.4–12.5** **E12** / Later scenarios. |
+| 1.3 | **§12.2** heading **T1–T24**; Session defaults ↔ **§12.5** (template alignment); template cross-refs (**§12.2** prompts, **§12.5** code-quality tie) synced with **`development-plan-template`** + **`development-planner`**. |

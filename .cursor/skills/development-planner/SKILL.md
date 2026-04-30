@@ -55,15 +55,16 @@ Typical citation set (mirror development-plan §**12.1** + session defaults):
 2. In **§1 Document control**, set **Template used** to **`docs/templates/development-plan-template.md`** (or the repo-relative path templates use).
 3. **§2 Linked inputs** MUST include PRD, TDD, wireframes/when applicable, tech stack — and **`Baseline / superseded plans`** when replacing an older `development-plan-v*.md`.
 
-Development-plan Sections **6–13** shorthand (aligned to template numbering):
+Development-plan Sections **5–13** shorthand (aligned to template numbering):
 
 | Section | Content |
 | --- | --- |
+| **§5** | Assumptions and constraints; repos may append **§5.1**, **§5.2**, … (e.g. operational alerting starters) **without** renumbering **§6–§13**. |
 | **§6** | Work breakdown (**6.1** epics, **6.2** ticket map including dependencies). |
 | **§7** | Sequencing and milestones. |
 | **§8** | Testing and quality plan; **Quality gates MUST reference** manual §**12.5** and §**12.6** where web/mobile applies. |
 | **§11** | Traceability summary. |
-| **§12** | Sequenced prompts through **12.5** exactly as template; add **§12.6 Mobile automation standard** after **12.5** (skill extension below). |
+| **§12** | Session defaults → **§12.1–12.5** exactly as **`docs/templates/development-plan-template.md`** headings; append **§12.6 Mobile automation standard** after **12.5** when **`apps/web`** exists (skill extension below). §**12.3** is **always** “Standard test commands” per template—manual matrix closes **§12.5**. |
 
 ## Section 12 — template conformance + planner extension
 

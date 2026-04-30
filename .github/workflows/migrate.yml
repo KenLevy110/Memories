@@ -111,35 +111,7 @@ jobs:
             cat "$migrate_log"
             echo "----- end db:migrate output -----"
 
-            node <<'EOF'
-            const { Client } = require("pg");
-
-            async function run() {
-              const client = new Client({ connectionString: process.env.DATABASE_URL });
-              try {
-                await client.connect();
-                const { rows } = await client.query(
-                  "select current_database() as db, current_user as usr, version() as version"
-                );
-                const row = rows[0] || {};
-                console.log("DB connectivity check:", {
-                  database: row.db,
-                  user: row.usr,
-                  version_prefix: typeof row.version === "string" ? row.version.split(" ").slice(0, 2).join(" ") : "unknown",
-                });
-              } catch (err) {
-                console.error("DB connectivity diagnostic failed:", err && err.message ? err.message : String(err));
-              } finally {
-                try {
-                  await client.end();
-                } catch {}
-              }
-            }
-
-            run().catch((err) => {
-              console.error("Unexpected diagnostics error:", err && err.message ? err.message : String(err));
-            });
-            EOF
+            node -e "const { Client } = require('pg'); (async () => { const client = new Client({ connectionString: process.env.DATABASE_URL }); try { await client.connect(); const { rows } = await client.query('select current_database() as db, current_user as usr, version() as version'); const row = rows[0] || {}; console.log('DB connectivity check:', { database: row.db, user: row.usr, version_prefix: typeof row.version === 'string' ? row.version.split(' ').slice(0, 2).join(' ') : 'unknown' }); } catch (err) { console.error('DB connectivity diagnostic failed:', err && err.message ? err.message : String(err)); } finally { try { await client.end(); } catch {} } })().catch((err) => { console.error('Unexpected diagnostics error:', err && err.message ? err.message : String(err)); });"
 
             exit 1
           fi

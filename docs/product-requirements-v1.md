@@ -9,11 +9,11 @@
 | **PM / owner**          | Ben Cerezo                                                                                                                                                                                                                                                                                                                                             |
 | **Reviewers**           | Engineering, design, compliance (PM to confirm reviewers)                                                                                                                                                                                                                                                                                            |
 | **Status**              | Approved                                                                                                                                                                                                                                                                                                                                               |
-| **Version**             | 1.4                                                                                                                                                                                                                                                                                                                                                    |
+| **Version**             | 1.5                                                                                                                                                                                                                                                                                                                                                    |
 | **Edition**             | **v1** — filename `product-requirements-v1.md`. Breaking rewrites: new file (`-v2.md`, …). Minor edits: same file + revision note below.                                                                                                                                                                                                              |
 | **Last updated**        | 2026-04-30                                                                                                                                                                                                                                                                                                                                             |
 | **Template used**       | `.cursor/skills/product-manager/reference.md`; `docs/templates/product-requirements-template.md` (control table)                                                                                                                                                                                                                                       |
-| **Related docs**        | [README.md](../README.md); [tech-stack.md](tech-stack.md); [memories-user-workflow-v1.md](memories-user-workflow-v1.md); [technical-design-v1.md](technical-design-v1.md) **v1.4** (Approved); [design-wireframe-v1.md](design-wireframe-v1.md); [development-plan-v1.md](development-plan-v1.md); [development-plan.md](development-plan.md) (pointer); [implementation-log.md](implementation-log.md); [adr/README.md](adr/README.md); [Prototype Backend Engineering Handoff.md](Prototype%20Backend%20Engineering%20Handoff.md) |
+| **Related docs**        | [README.md](../README.md); [tech-stack.md](tech-stack.md); [memories-user-workflow-v1.md](memories-user-workflow-v1.md); [technical-design-v1.md](technical-design-v1.md) **v1.5** (Approved); [design-wireframe-v1.md](design-wireframe-v1.md); [development-plan-v1.md](development-plan-v1.md); [development-plan.md](development-plan.md) (pointer); [implementation-log.md](implementation-log.md); [adr/README.md](adr/README.md); [Prototype Backend Engineering Handoff.md](Prototype%20Backend%20Engineering%20Handoff.md) |
 | **External references** | [Notion mirror](https://plump-cheddar-f44.notion.site/Prototype-Backend-Engineering-Handoff-349fc9f5d1f880968428eac8506f728a?pvs=73) — **authoritative:** repo handoff markdown above                                                                                                                                                                  |
 
 
@@ -66,11 +66,18 @@ The experience must be a **very simple app**—minimal steps, plain language, la
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
 | **Guide**                  | Captures for client (Ohana Way)                                                                                                                    | Primary when this backs Guide flows |
 | **Memory keeper / family** | Consumer / Dashboard framing                                                                                                                       | Primary when that mode ships first  |
-| **Client (elder)**         | Subject of care; when they use the UI (now or later), flows must stay **very simple** (NFR-012). Often not a User in v1; access via `ClientAccess` | Subject                             |
+| **Client (elder)**         | Holds **their own credentials** when they log in (password or platform-chosen alternate); accesses **their** memorial archive—not the Guide’s workload. Subject of care stays distinct from **`Client`** persistence (handoff §4.1–4.2). Flows remain **very simple** (NFR-012). | Subject + eventual **client-self** authenticated user                               |
 | **Family**                 | Read / limited write per matrix (Section 7.2)                                                                                                      | Phased                              |
 
+### Tenancy — shared client workspace; separate logins
 
-Do not ship **user_id–only** authz that cannot grow into `ClientAccess`-shaped rules.
+- **Anchor:** Memories content is keyed by **`client_id`** (+ **`practice_id`**) on every route under `/clients/:clientId/`. In product language, Guide and elder “share an account” only in the sense of **sharing that client workspace**, **not** sharing one login or one `User` row.
+- **Guide:** authenticated **User** who may be authorized for **many** `client_id` values via platform **`ClientAccess`** (or successor) — primary capture and facilitation.
+- **Client (elder), signed in:** authenticated **User** linked to **exactly one** focal **`Client`** (handoff **`CLIENT_SELF`**), with JWT/session scope **narrow** to that **`client_id`** so the UX can show **only their** memories.
+- **Client without login:** unchanged — still a **`Client`** record only; Memories behavior stays authorized–actor-driven.
+- **Platform owns:** onboarding, passwords, resets, MFA, invites; exact claim names (`practice_id`, `user_id`, client allow-list vs single `client_id`, role enums). Memories **binds `:clientId` to those claims on every API call** (**FR-012**).
+
+Do not ship **user_id–only** authz that cannot grow into `ClientAccess`-shaped rules or **multi-tenant leakage** across `client_id` boundaries when a Guide’s token carries many scopes.
 
 ---
 
@@ -105,7 +112,7 @@ A **Memory** is metadata (e.g. name, room; optional era/valence per Section 4.3)
 | **FR-009** | Transcription UI: pending / ready / failed.                                                                    | P0  |                                     |
 | **FR-010** | List with cursor pagination (~20), recency default.                                                            | P0  | Section 5.5                         |
 | **FR-011** | Reject bad media clearly; ~2000px client resize target in capture.                                             | P0  | Section 5.1                         |
-| **FR-012** | Authz on every read/write: tenant + `ClientAccess` analog.                                                     | P0  | Sections 7.3–7.4; RLS vs app in TDD |
+| **FR-012** | Authz on every read/write: tenant + `ClientAccess` analog; **JWT must distinguish guide vs client-self** sessions (see Users + tenancy subsection).                                                     | P0  | Sections 7.3–7.4; RLS vs app in TDD §2 |
 | **FR-013** | Idempotent create-after-upload (no duplicate memories on retry).                                               | P0  | Section 5.1                         |
 | **FR-014** | Offline-tolerant save: retain artifacts, retry (e.g. backoff, up to 24h window per handoff).                   | P0  | Sections 2.5, 5.1, 12.1             |
 | **FR-015** | `suggest_prompt`-style API: minimal context in, one question or fallback on failure/timeout; **p95 under 2s**. | P1  | Section 6.2                         |
@@ -121,7 +128,7 @@ A **Memory** is metadata (e.g. name, room; optional era/valence per Section 4.3)
 
 ## Stories & acceptance (summary)
 
-- **CRUD / list:** Given Guide with client access, after successful capture save → memory appears in paginated list with correct metadata and media. Given Family with visibility, opening memory shows media + transcript, not practice-only artifacts (e.g. GuideNote—outside Memories scope).
+- **CRUD / list:** Given Guide with client access, after successful capture save → memory appears in paginated list with correct metadata and media. Given Client-self with **`ClientAccess`** to that `client_id` only, opening list/detail stays within that workspace (no cross-client data). Given Family with visibility, opening memory shows media + transcript, not practice-only artifacts (e.g. GuideNote—outside Memories scope).
 - **Resilient save:** Given failed upload/API, client retries per TDD without duplicate rows (**FR-013**).
 - **Transcription / tags:** Transcript states per **FR-009**; optional tag flow per **FR-016**.
 - **Elder-friendly:** A first-time or low-tech **elder** can complete **capture** and **playback** paths without extra coaching beyond short copy on screen (NFR-012); validate with usability sessions when feasible.
@@ -159,7 +166,7 @@ A **Memory** is metadata (e.g. name, room; optional era/valence per Section 4.3)
 
 ## Milestones, risks, open questions
 
-**Milestones:** [technical-design-v1.md](technical-design-v1.md) **v1.4 (Approved)** enumerates MVP HTTP routes (**§3.2**), observability playbook (**§3.3**), transcript polling contract, JWT hardening checklist, and Appendix A MVP clarifications, while STT eval (~20 samples, Section 3.4) runs in parallel. Cross-product MVP pilot Section 12.1 remains TBD (~3–6 mo order-of-magnitude, Section 12.4). Execution sequencing and staged prod slices: **[development-plan-v1.md](development-plan-v1.md)** ([pointer](development-plan.md)).
+**Milestones:** [technical-design-v1.md](technical-design-v1.md) **v1.5 (Approved)** enumerates MVP HTTP routes (**§3.2**), observability playbook (**§3.3**), transcript polling contract, JWT hardening checklist, and Appendix A MVP clarifications, while STT eval (~20 samples, Section 3.4) runs in parallel. Cross-product MVP pilot Section 12.1 remains TBD (~3–6 mo order-of-magnitude, Section 12.4). Execution sequencing and staged prod slices: **[development-plan-v1.md](development-plan-v1.md)** ([pointer](development-plan.md)).
 
 **Risks:** BAA lead time → parallel legal + synthetic staging (Sections 8.5–8.6); offline capture cost → timeboxed spike (Section 12.4); repo boundary → explicit contracts in TDD; PHI in notifications/logs → generic notifications + redaction (Sections 10.3, 11.1).
 
@@ -173,7 +180,7 @@ A **Memory** is metadata (e.g. name, room; optional era/valence per Section 4.3)
 
 ## Appendix
 
-**Glossary:** **Ohana Way** — full product (handoff). **Memory Capture** — four-step flow (Section 5.1). **Practice / Client / ClientAccess** — tenant + access (Section 4). **Memory / MemoryMedia / MemoryTranscript** — persistence (Section 4.2).
+**Glossary:** **Ohana Way** — full product (handoff). **Memory Capture** — four-step flow (Section 5.1). **Practice / Client / ClientAccess** — tenant + **User↔Client** access (handoff §4); **client workspace** — all memories sharing one **`client_id`**. **`CLIENT_SELF`** — platform role for an elder **`User`** linked to **their** **`Client`** (narrow JWT scope). **Memory / MemoryMedia / MemoryTranscript** — persistence (Section 4.2).
 
 **References:** [Prototype Backend Engineering Handoff.md](Prototype%20Backend%20Engineering%20Handoff.md); [Notion](https://plump-cheddar-f44.notion.site/Prototype-Backend-Engineering-Handoff-349fc9f5d1f880968428eac8506f728a?pvs=73); [README](../README.md); [tech-stack.md](tech-stack.md).
 
@@ -188,6 +195,7 @@ A **Memory** is metadata (e.g. name, room; optional era/valence per Section 4.3)
 | v1.2 | 2026-04-30 | Elevated PRD/TDD alignment—Approved pairing with **[technical-design-v1.md](technical-design-v1.md)** **v1.2** (route addendum, observability playbook, JWT posture, clarified family MVP) |
 | v1.3 | 2026-04-30 | Related docs: **[development-plan-v1.md](development-plan-v1.md)** + [pointer](development-plan.md); NFR-010/011 and milestones cross-links to editioned plan |
 | v1.4 | 2026-04-30 | **NFR-010** notes: pointer to **[development-plan-v1.md](development-plan-v1.md) §5.1** + implementation-log for owners |
+| v1.5 | 2026-04-30 | **Tenancy:** Guide vs client-self logins sharing one **client workspace** (**`client_id`**); **`FR-012`** clarified; glossary + scenarios; aligns with **[technical-design-v1.md](technical-design-v1.md)** v1.5 |
 
 ---
 

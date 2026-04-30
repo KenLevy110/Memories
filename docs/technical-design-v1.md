@@ -7,11 +7,11 @@
 | **Author** | Ken Levy |
 | **Engineering owner** | Ken Levy |
 | **Status** | Approved |
-| **Version** | 1.4 |
+| **Version** | 1.5 |
 | **Edition** | **v1** — filename `technical-design-v1.md` (use `-v2.md` etc. for major rewrites) |
 | **Last updated** | 2026-04-30 |
 | **Template used** | `docs/templates/technical-design-template.md` (structure); content scoped to Memories |
-| **Related PRD** | [product-requirements-v1.md](product-requirements-v1.md) v1.4 |
+| **Related PRD** | [product-requirements-v1.md](product-requirements-v1.md) v1.5 |
 | **Related docs** | [memories-user-workflow-v1.md](memories-user-workflow-v1.md); [design-wireframe-v1.md](design-wireframe-v1.md); [development-plan-v1.md](development-plan-v1.md); [development-plan.md](development-plan.md) (pointer); [tech-stack.md](tech-stack.md); [implementation-log.md](implementation-log.md); [adr/README.md](adr/README.md); [ADR-20260430-memories-platform-boundary-auth-routing.md](adr/ADR-20260430-memories-platform-boundary-auth-routing.md); [Prototype Backend Engineering Handoff.md](Prototype%20Backend%20Engineering%20Handoff.md) |
 
 ---
@@ -53,10 +53,17 @@ flowchart TB
   API --> STT
   API --> AI
   IdP -.->|JWT| API
-  Dash -.->|deep links same user| Web
+  Dash -.->|deep links; JWT actors Guide vs client-self per PRD| Web
 ```
 
 **Identity:** **Platform-issued JWT** verified by `apps/api` (JWKS or equivalent). Claims must support **tenant + client authorization** (e.g. `practice_id`, `user_id`, roles, and client scope as agreed with the Dashboard team). Memories **does not** own IdP for this slice.
+
+**Guide vs client-self (same workspace, different principals):**
+
+- **`Client`** (handoff §4): the elder as a persisted subject — **system of record on the platform**, not duplicated in Memories.
+- **Guide `User`:** may appear in JWTs that authorize **many** `client_id` values — e.g. list or array claim, or Dashboard session + deep link; every **Memories** request still names an explicit `:clientId` in path; middleware **must reject** paths outside that principal’s allowance.
+- **Client-self `User`** (platform assigns a **`CLIENT_SELF`–equivalent role**): corresponds to exactly one focal **`client_id`** for normal UX; JWT should be **narrow** (fixed `client_id` or singleton allow-list) so list/detail defaults never require a client-picker and **cannot** bleed into another archive.
+- **Two passwords ≠ one user:** Guide and elder have **distinct** credentials and **`user_id`**s; overlap is **`client_id`** (shared **client workspace**) and platform **`ClientAccess`** rows — not merged logins.
 
 **System of record:** **Platform** owns Practice / User / Client / `ClientAccess`. **Memories** owns **memory domain tables**, **job rows**, and **memory mutation audit** in this service’s PostgreSQL. Cross-check [ADR-20260430-memories-platform-boundary-auth-routing.md](adr/ADR-20260430-memories-platform-boundary-auth-routing.md).
 
@@ -117,7 +124,7 @@ Operational alerts should live beside the Memories service dashboards (infra pro
 
 Escalations and paging policy stay with platform ops unless explicitly delegated—Memories publishes metric names + thresholds referenced from **[development-plan-v1.md](development-plan-v1.md) §5.1** ([pointer](development-plan.md)); wire dashboards from this §3.3 playbook.
 
-**Global chrome (all MC\*):** facilitator strip (“Facilitating for …”) from auth context + `clientId`; no PII in analytics payloads (**NFR-006**, handoff §10.3).
+**Global chrome (all MC\*):** facilitator strip (“Facilitating for …”) from auth context + `clientId` when the actor is Guide (or broader staff role); client-self sessions use **participant-appropriate copy** (“Your memories”) and the same `:clientId` routes without implying a facilitation relationship. No PII in analytics payloads (**NFR-006**, handoff §10.3).
 
 **Errors:** JSON body `{ code, message, request_id }` on 4xx/5xx; correlation id on every request (**NFR-006**).
 
@@ -185,7 +192,7 @@ Align with handoff Section 4.2 (migration naming may differ):
 ### JWT-only authorization hardening checklist
 
 - Mandatory claim validation (`iss`, `aud`, `exp`, `nbf` when present); reject tokens missing practice + client linkage when the route scopes to `:clientId`.
-- Bind route parameters (`:clientId`, `:memoryId`) to JWT claims/principal lists—never trust client-supplied identifiers without cross-check (**FR-012**).
+- Bind route parameters (`:clientId`, `:memoryId`) to JWT claims/principal lists—never trust client-supplied identifiers without cross-check (**FR-012**). For Guides, validate `:clientId` ⊆ allowed set; for client-self, require **exact match** to the JWT’s focal `client_id` (or singleton allow-list).
 - Rotate signing keys gracefully (JWKS cache refresh + pinning tests) and version breaking claim changes behind coordinated Dashboard releases.
 
 ### Accessibility co-design cues
@@ -235,12 +242,14 @@ Authoritative narrative: [ADR-20260430-memories-platform-boundary-auth-routing.m
 
 Source: handoff **§7.2** (indicative; product may refine). **Guide notes / messages** are out of scope for this repo but inform platform auth.
 
-| Action | Guide (primary) | Guide (support) | Family (primary) | Family (member) |
-| --- | --- | --- | --- | --- |
-| View all memories | ✓ | ✓ | ✓ (by visibility) | ✓ (by visibility) |
-| Create memory | ✓ | ✓ | — | — |
-| Edit memory (name, tags) | ✓ | ✓ | ✓ (own comments) | ✓ (own comments) |
-| Delete memory | ✓ | — | — | — |
+| Action | Guide (primary) | Guide (support) | Client (self) | Family (primary) | Family (member) |
+| --- | --- | --- | --- | --- | --- |
+| View all memories | ✓ | ✓ | ✓ (by visibility) | ✓ (by visibility) | ✓ (by visibility) |
+| Create memory | ✓ | ✓ | — | — | — |
+| Edit memory (name, tags) | ✓ | ✓ | — | ✓ (own comments) | ✓ (own comments) |
+| Delete memory | ✓ | — | — | — | — |
+
+**Client (self):** **distinct login** from Guide; **`user_id`** differs; **`client_id`** is the shared **client workspace** with the Guide (**PRD** tenancy subsection). MVP matrix above keeps **capture** Guide-led (**Create memory —**); expand **Edit**/`Create` for CLIENT_SELF only with PRD + Dashboard JWT updates.
 
 **Family roles:** default MVP ships **family read/edit comments per matrix**, **without** autonomous create/delete. Any future family capture/delete requires PRD uplift + Appendix A revisions + JWT claim coverage from Dashboard.
 
@@ -267,3 +276,4 @@ Everything in Memories can be agent-implemented locally, yet **coordination arti
 | 1.2 | 2026-04-30 | API addendum routes, alerting guidance, clarified transcript/tag MVP scope, JWT hardening checklist, observability responsibilities, appendix family note |
 | 1.3 | 2026-04-30 | Related docs + delivery coordination: links to **[development-plan-v1.md](development-plan-v1.md)** ([pointer](development-plan.md)); alerting text uses editioned plan |
 | 1.4 | 2026-04-30 | §3.3 cross-link: operational threshold seeds in **[development-plan-v1.md](development-plan-v1.md) §5.1** |
+| 1.5 | 2026-04-30 | §2 Guide vs **`CLIENT_SELF`**, JWT narrow-scope rule, §7 claim-binding nuance; §3.1 facilitator chrome note; Appendix A **Client (self)** column (**[product-requirements-v1.md](product-requirements-v1.md)** v1.5) |

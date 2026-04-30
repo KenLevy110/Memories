@@ -19,7 +19,7 @@
 | **Web** | **React** + **Vite** + TypeScript; routing via **TanStack Router**; capture flow **`/clients/:clientId/capture?step=…`** |
 | **Shared contracts** | **Zod** in `@memories/shared` — extend as features land |
 | **Database** | **PostgreSQL** with **Drizzle** (migrations + queries) when persistence is added |
-| **Auth with Dashboard / platform** | **Platform-issued JWT** verified by `apps/api` (JWKS or equivalent); Memories does not own IdP for this slice |
+| **Auth with Dashboard / platform** | **Platform-issued JWT** verified by `apps/api` (JWKS or equivalent); claims encode **practice + client scope + role** (**Guide** may have many **`client_id`s**; **client-self** narrow to one)—see **[technical-design-v1.md](technical-design-v1.md)** §2; Memories does not own IdP |
 | **System of record** | **Platform:** Practice, User, Client, `ClientAccess`. **Memories DB:** Memory, MemoryMedia, MemoryTranscript, jobs, memory-scoped audit (see ADR) |
 | **Object storage** | **S3-compatible**; short-lived signed PUT/GET; keys **`{practice_id}/{memory_id}/{media_id}`** (see TDD §5) |
 | **Transcription** | **Postgres-backed job rows** + worker; **STT vendor** behind an adapter, **BAA-gated** for prod; **client poll** for transcript status in v1 |

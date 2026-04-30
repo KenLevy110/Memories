@@ -35,7 +35,7 @@ Use this checklist when bootstrapping a new repo from Ohana `cursor-template`, o
 - [ ] Configure CI checks for lint, tests, and build
 - [ ] Configure security checks in `.github/workflows/security.yml`
 - [ ] Require status checks: **`docs-smoke`**, **`checks`** (CI), and Security jobs you use (**`secrets-scan`**, **`npm-audit`**, PR-only **`dependency-review`**)
-- [ ] When PostgreSQL exists: add **`DATABASE_URL_PRODUCTION`** (and **`DATABASE_URL_STAGING`** if used), run **Actions → Database migrate** (`.github/workflows/migrate.yml`), then decide whether to enable automatic migrate on `main` per [`docs/infrastructure.md`](docs/infrastructure.md) §3
+- [ ] When PostgreSQL exists: add **`DATABASE_URL_PRODUCTION`** (and **`DATABASE_URL_STAGING`** if used), run **Actions → Database migrate** (`.github/workflows/migrate.yml`), then decide whether to enable automatic migrate on `main` per [`docs/infrastructure.md`](docs/infrastructure.md) (Section 3, production migrations)
 - [ ] Add branch/PR conventions
 - [ ] Add release and rollback notes appropriate for project risk
 - [ ] Update `.github/CODEOWNERS` with real team handles

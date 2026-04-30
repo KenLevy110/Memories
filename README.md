@@ -52,6 +52,9 @@ npm run dev:web
 - Follow `NEW_PROJECT_CHECKLIST.md` for rules, `CODEOWNERS`, security contacts, and CI.
 - `TEMPLATE_SYNC.md` explains staying aligned with `cursor-template` when you pull reusable changes.
 - Run `.\scripts\verify-template.ps1` after renames; use `-Strict` when cleaning placeholders (e.g. `@your-org` in `.github/CODEOWNERS`).
+- CI includes **`docs-smoke`** (`scripts/check-docs.sh`) plus **`checks`** (lint, typecheck, tests). In GitHub branch protection, require **`docs-smoke`** and **`checks`**, and the Security jobs you use (see `CONTRIBUTING.md`).
+- Optional DB migrates: `.github/workflows/migrate.yml` (manual dispatch); defaults and secrets are described in `docs/infrastructure.md` (section 3).
+- Git hooks (agent transcript archive): `git config core.hooksPath .githooks`. Set your Cursor transcript directory via `scripts/sync-agent-chats.local.env` (copy from `scripts/sync-agent-chats.local.env.example`) or `CURSOR_AGENT_TRANSCRIPTS_DIR`; see `docs/agent-chats/README.md`.
 
 ## License
 

@@ -563,7 +563,7 @@ Workspaces use **`@memories/web`** and **`@memories/api`** (see root `package.js
 | **0.7** | Upload audio file | T16 | Pick file, save | Playback matches record path | Manual / date |
 | **0.8** | Transcription | T17,T18 | Record audio; poll until ready | Text appears; failures readable | Manual / date |
 | **0.9** | Video | T19 | Capture short clip | Playback OK on target devices | Manual / date |
-| **Later** | **FR-017** / **FR-018** (when unblocked) | T23,T24 | Role-appropriate comment add/read; denial for wrong role; set visibility → family sees per policy | Matches Appendix A + PRD ; no PHI in notifications | Manual / date |
+| **Later** | **FR-017** / **FR-018** (when unblocked) | T23,T24 | Role-appropriate comment add/read; denial for wrong role; set visibility → family sees per policy | Matches Appendix A + PRD; no PHI in notifications | Manual / date |
 
 **Pre-review code quality (applies across epics):** read `.cursor/skills/developer-code-quality/SKILL.md` before marking review-ready.
 

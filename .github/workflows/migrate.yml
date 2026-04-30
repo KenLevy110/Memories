@@ -34,58 +34,36 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  migrate-manual:
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+  migrate-production:
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Require root package.json
-        shell: bash
-        run: |
-          if [ ! -f package.json ]; then
-            echo "No root package.json — add a monorepo with db:migrate before using this workflow."
-            exit 1
-          fi
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-
-      - name: Install dependencies
-        shell: bash
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            echo "No package-lock.json — using npm install (add a lockfile for reproducible migrates)."
-            npm install
-          fi
-
-      - name: Run migrations
+      - name: Gate auto migration by secret flag
+        id: gate
         shell: bash
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL_PRODUCTION }}
-          API_WORKSPACE: ${{ inputs.api_workspace }}
+          ENABLE_AUTO_PROD_MIGRATE: ${{ secrets.ENABLE_AUTO_PROD_MIGRATE }}
         run: |
-          if [ -z "${DATABASE_URL:-}" ]; then
-            echo "Missing DATABASE_URL_PRODUCTION repository secret."
-            exit 1
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual run detected: migration enabled."
+            echo "run_migrate=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
-          npm run db:migrate -w "$API_WORKSPACE"
 
-  migrate-auto-production:
-    if: ${{ github.event_name == 'push' && secrets.ENABLE_AUTO_PROD_MIGRATE == 'true' }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
+          if [ "${ENABLE_AUTO_PROD_MIGRATE:-}" = "true" ]; then
+            echo "Auto production migration enabled by secret flag."
+            echo "run_migrate=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Auto production migration disabled (set ENABLE_AUTO_PROD_MIGRATE=true to enable)."
+            echo "run_migrate=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v5
+        if: ${{ steps.gate.outputs.run_migrate == 'true' }}
 
       - name: Require root package.json
+        if: ${{ steps.gate.outputs.run_migrate == 'true' }}
         shell: bash
         run: |
           if [ ! -f package.json ]; then
@@ -93,12 +71,14 @@ jobs:
             exit 1
           fi
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
+        if: ${{ steps.gate.outputs.run_migrate == 'true' }}
         with:
           node-version: "22"
           cache: npm
 
       - name: Install dependencies
+        if: ${{ steps.gate.outputs.run_migrate == 'true' }}
         shell: bash
         run: |
           if [ -f package-lock.json ]; then
@@ -109,12 +89,14 @@ jobs:
           fi
 
       - name: Run production migrations
+        if: ${{ steps.gate.outputs.run_migrate == 'true' }}
         shell: bash
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_PRODUCTION }}
+          API_WORKSPACE: ${{ github.event.inputs.api_workspace || '@memories/api' }}
         run: |
           if [ -z "${DATABASE_URL:-}" ]; then
             echo "Missing DATABASE_URL_PRODUCTION repository secret."
             exit 1
           fi
-          npm run db:migrate -w @memories/api
+          npm run db:migrate -w "$API_WORKSPACE"

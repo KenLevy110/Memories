@@ -12,8 +12,6 @@
 
 name: Database Migration
 
-run-name: Database Migration (${{ github.event_name }})
-
 on:
   workflow_dispatch:
     inputs:
@@ -101,6 +99,16 @@ jobs:
 
           if [ -z "${DATABASE_URL:-}" ]; then
             echo "Missing DATABASE_URL_PRODUCTION repository secret."
+            exit 1
+          fi
+
+          db_host="$(node -e "try { const u = new URL(process.env.DATABASE_URL || ''); console.log(u.hostname || ''); } catch { console.log(''); }")"
+          if [ -z "${db_host}" ]; then
+            echo "Unable to parse host from DATABASE_URL_PRODUCTION."
+            exit 1
+          fi
+          if [[ "${db_host}" == *.railway.internal ]]; then
+            echo "::error::DATABASE_URL_PRODUCTION points to Railway private host (${db_host}), which is not reachable from GitHub-hosted runners. Use Railway's public connection URL for GitHub Actions migrations."
             exit 1
           fi
 

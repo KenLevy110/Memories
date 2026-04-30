@@ -13,7 +13,7 @@ For template structure and section intent, see [development-plan-template.md](te
 | Field | Value |
 | --- | --- |
 | **Title** | Memories — development plan |
-| **Version** | 1.0 |
+| **Version** | 1.2 |
 | **Author** | Ken Levy |
 | **Date** | 2026-04-30 |
 | **Status** | Draft |
@@ -28,8 +28,8 @@ Per [documentation governance](../.cursor/rules/docs-governance.mdc), derived do
 
 | Artifact | Location |
 | --- | --- |
-| **PRD** | [product-requirements-v1.md](product-requirements-v1.md) v1.3 |
-| **Technical design** | [technical-design-v1.md](technical-design-v1.md) v1.3 |
+| **PRD** | [product-requirements-v1.md](product-requirements-v1.md) v1.4 |
+| **Technical design** | [technical-design-v1.md](technical-design-v1.md) v1.4 |
 | **Wireframes** | [design-wireframe-v1.md](design-wireframe-v1.md) |
 | **User workflow** | [memories-user-workflow-v1.md](memories-user-workflow-v1.md) |
 | **Tech stack** | [tech-stack.md](tech-stack.md) |
@@ -46,7 +46,7 @@ Per [documentation governance](../.cursor/rules/docs-governance.mdc), derived do
 
 - **Delivery goal:** Implement the Memories vertical (`apps/web`, `apps/api`, `packages/shared`) so **Stage 0.5** can run in **production** with **one photo** and **one in-browser audio recording** per memory, plus **list**, **detail**, **playback**, **JWT authz**, **signed object storage**, **idempotent save**, **offline-tolerant client retry**, and **audit** for PHI-bearing writes. **Later stages** add **multiple images**, **uploaded audio files** (not only `MediaRecorder`), **async transcription** + UI states, **video capture**, and **AI `suggest_prompt` / tags** per PRD priorities—each stage is **deployable** behind the same API/versioning discipline. Success is measured by **safe production operation** (no authz leaks, no PHI in logs), **resilient capture** (retries without duplicate memories), and **traceability** to **FR-** / **NFR-** IDs.
 - **Product locks / decisions:** Platform owns IdP and client access; Memories enforces **app-layer authz** on every route (**FR-012**); **no Postgres RLS** in v1 per TDD; **IndexedDB-only drafts** until finalize; **poll** for transcript status when transcription ships (**FR-009**). **Staged exception (Stage 0.5):** transcription pipeline and `suggest_prompt` may be **off or stubbed** in production until **Stage 0.8 / 1.0**—documented explicitly in Section 4 so PM/compliance can sign the reduced P0 set for the first go-live.
-- **Execution approach:** **Foundation and API contracts** first (schema, JWT, signing, CRUD), then **web capture v0.5**, then **production readiness** (observability, smoke/E2E). **Epics E6–E10** layer features **after** 0.5 is stable; each epic should merge with **feature flags** or **config** so production can enable capabilities incrementally.
+- **Execution approach:** **Foundation and API contracts** first (schema, JWT, signing, CRUD), then **web capture v0.5**, then **production readiness** (observability, smoke/E2E). **Epics E7–E11** layer post–0.5 capabilities **after** the **0.5** milestone (T1–T14) is stable; each epic should merge with **feature flags** or **config** so production can enable capabilities incrementally. (**E6** is production readiness and overlaps **0.5** via T13–T14, T22.)
 - **Quality bar:** Align with **[AGENTS.md](../AGENTS.md)** — typically **≥ 80%** line/statement coverage and changed-file floors, **security** per PRD/TDD and **`developer-security`**, and **three review layers** on non-trivial work: **`developer-code-quality`**, **`developer-senior`** where Section 12 marks **Sr** or trust boundaries move, and **`developer-quality-assurance`** where **QA** is primary or release/regression scope requires it. CI: `npm run lint`, `npm run typecheck`, `npm run test` at minimum before merge.
 
 ### 3.1 AI-first delivery assumptions
@@ -76,7 +76,8 @@ Per [documentation governance](../.cursor/rules/docs-governance.mdc), derived do
 | Upload audio **file** (library) vs capture-only | Capture-only acceptable | **0.7** |
 | **FR-008** / **FR-009** transcription | Optional off or worker disabled; UI may hide transcript block | **0.8** |
 | **FR-015** `suggest_prompt` | Static copy or shortened stepper; no LLM call required | **1.0** (or flagged pilot) |
-| **FR-017** reactions/comments | Optional; can remain off until Appendix A JWT ready | Later |
+| **FR-017** reactions/comments (P1 groundwork per PRD) | Optional for **0.5**; ship when Appendix A + Dashboard JWT claims are ready—no autonomous family create/delete until PRD revision | **Later** (own epic when unblocked; see TDD Appendix A) |
+| **FR-018** `sharing_visibility` (P2) | Schema may reserve field in **T2**; product behavior deferred unless pulled forward | **Later** |
 | Video recording (workflow screenshots show alternate) | No | **0.9** |
 
 ---
@@ -87,7 +88,24 @@ Per [documentation governance](../.cursor/rules/docs-governance.mdc), derived do
 - **BAA / NFR-007:** no real PHI in production vendors until BAAs exist; use synthetic data in lower environments.
 - **Schema:** `memory_media` may allow multiple rows from **Stage 0.6** onward; **Stage 0.5** enforces **at most one image and one audio** in validation and UI to avoid half-built multi-attach UX.
 - **Offline:** client queue and **Idempotency-Key** on finalize (**FR-013**, **FR-014**) are required for 0.5; Background Sync is progressive enhancement.
-- **Observability:** adopt [technical-design-v1.md](technical-design-v1.md) §3.3 alert themes; record concrete threshold owners in [implementation-log.md](implementation-log.md) as hooks land.
+- **Observability:** adopt [technical-design-v1.md](technical-design-v1.md) §3.3 alert themes; **starter signal names and thresholds** for **NFR-010** are frozen in **§5.1** (tune with ops; log changes in [implementation-log.md](implementation-log.md)).
+
+### 5.1 NFR-010 — Operations alerting defaults
+
+**Purpose:** Give engineering and on-call a **first concrete** alerting contract (PRD **NFR-010** + TDD §3.3). These are **starting values**, not SLO promises—**Decision owner** fills names in metrics backend and adjusts burn rates after baseline weeks.
+
+| Signal (maps to TDD §3.3 theme) | Starter condition (staging + prod) | Decision owner (fill) | Notes |
+| --- | --- | --- | --- |
+| **`GET /health` failure** | ≥ **2** consecutive failed probes from synthetic checker, or error rate **> 5%** over **5 m** | Infra / Memories on-call | Exclude deploy blips with short suppression window if needed. |
+| **Authenticated list canary** (`GET …/memories?cursor=`) | **5xx** rate **> 1%** over **15 m** or **p95 latency > 2 s** over **15 m** (adjust per environment) | Memories eng | Use non-PHI fixture `clientId` + service token in canary only. |
+| **`POST …/uploads/images/sign` errors** | Error budget: **> 2%** of attempts **5xx/4xx(other than expected validation)** over **15 m** | Memories eng | Correlate with object-storage provider status. |
+| **`POST …/uploads/audio/sign` errors** | Same as image sign | Memories eng | Pair with upload path dashboards. |
+| **`POST …/memories` finalize errors** | **> 1%** failure rate over **15 m** (excluding known 401/403 abuse) | Memories eng | Pilot-critical per TDD §3.3. |
+| **Object storage signer failures** | Any sustained inability to issue signed URL (provider **5xx** or local signer error) **> 5 m** | Memories eng | Treat as **Sev2** until cleared (TDD §3.3). |
+| **Transcript jobs stuck `pending`** | After **Stage 0.8** live: age **> 15 m** (staging) / **> agreed SLA** (prod) for **> N** jobs (start with **N ≥ 3**) | Memories eng | When STT off, mute or gate this alert. |
+| **`suggest_prompt` tail latency** | After **Stage 1.0**: **p95 > 1.5 s** sustained **15 m** or spike in timeout count (server **~1.8s** cap) | Memories eng | Tie to LLM/provider health. |
+
+**Process:** After dashboards exist, **ticket the metric names + query links** from **T13** into **implementation-log** and set **Decision owner** roster. Page only after runbook exists ([`docs/runbook.md`](runbook.md) — add when defined).
 
 ---
 
@@ -108,6 +126,7 @@ Per [documentation governance](../.cursor/rules/docs-governance.mdc), derived do
 | **E9** | Transcription | Job worker, **`GET …/transcript`**, pending/ready/failed UI | **FR-008**, **FR-009** |
 | **E10** | Video recording | Signed video upload, `memory_media.type` video, UI branch | Workflow alternates (PRD multimedia); handoff-aligned |
 | **E11** | AI prompt & tags | `suggest_prompt` adapter, timeout/fallback; curator tags (**FR-016** groundwork) | **FR-015**, **FR-016**, **NFR-005**, **NFR-009** |
+| **E12** | Comments, reactions & sharing visibility (**deferred**) | **`memory_comments` / reactions** per [technical-design-v1.md](technical-design-v1.md) Appendix A (**FR-017**); **`sharing_visibility` behavior** (**FR-018**)—no autonomous family create/delete until PRD + JWT uplift | **FR-017**, **FR-018**; TDD §5, Appendix A |
 
 ### 6.2 Ticket map
 
@@ -137,6 +156,10 @@ Reviewer legend: **Sr** = senior, **Sec** = security-sensitive, **QA** = QA prim
 | **T20** | **Stage 1.0** — `POST …/suggest_prompt` + timeout/fallback + wire `?step=prompt` | E11 | T3, T4 | Backend + AI adapter | Sec | M |
 | **T21** | **Stage 1.0** — tags on create/update (no auto suggest until **FR-016**) | E11 | T9 | Full stack | — | M |
 | **T22** | Release checklist: staging → prod, flags, synthetic PHI policy, manual matrix sign-off | E6 | T14 | Manager + QA | Manual | S |
+| **T23** | **FR-017** — Comments/reactions API + detail UI (matrix + audit); blocked until Dashboard JWT encodes Appendix A roles/visibility | E12 | T9; **blocked:** JWT schema + PM go | Full stack | Sr, Sec, QA | L |
+| **T24** | **FR-018** — Persist and enforce **`sharing_visibility`** (and UX to set it); may trail **T23** | E12 | T23; **blocked:** FR-017 scope agreement | Full stack | Sr, QA | M |
+
+**Definition of ready — T23 / T24:** (1) Written JWT claim names and role matrix from Dashboard (**FR-012** analog). (2) PM sign-off that autonomous family **create/delete** remain **out** unless PRD + Appendix A change. (3) Wireframes/design update for comment thread if not covered by existing **MC**/detail states.
 
 ---
 
@@ -155,6 +178,7 @@ Stages are **product semantics**; map to git/CI as **tags** or release notes (`v
 | **0.9** | Video capture + playback | T19 | New media MIME paths |
 | **1.0** | PRD-aligned v1 polish: AI prompt path + curator tags | T20, T21 | Feature-flag LLM per env |
 | **Ops** | Staging/prod parity checklist | T22 | Every stage |
+| **Later** | **FR-017** / **FR-018** social + visibility (**E12**) | **T23**, **T24** (not in stages **0.5–1.0** until **Definition of ready** in §6.2 cleared) | Enable when platform JWT + PRD gates satisfied |
 
 ### 7.2 Parallel track guidance
 
@@ -181,12 +205,16 @@ Skills reference: match owner lane to `.cursor/skills/<name>/SKILL.md` (see Sect
 Quality gates:
 
 - Keep CI gates from [AGENTS.md](../AGENTS.md) unless this plan’s revision history records a **waived** change with owner + expiry.
-- Regression focus: **authz**, **idempotency**, **signing expiry**, **transcript state** once **0.8** ships.
+- **Manual scenarios:** execute or sign off per **§12.5** before treating a stage as release-ready.
+- **Mobile web:** PR smoke on **mobile Chrome + mobile Safari (WebKit)** per **§12.6** when `apps/web` capture or list UX changes.
+- Regression focus: **authz**, **idempotency**, **signing expiry**, **transcript state** once **0.8** ships; **accessibility** (**NFR-004**, **NFR-012**) on primary flows via T11/T14 and design-wireframe states.
 - Update [implementation-log.md](implementation-log.md) when tickets complete.
 - New ADRs for trust-boundary or contract changes; index under [adr/README.md](adr/README.md).
 - **Structural pass:** `.cursor/skills/developer-code-quality/SKILL.md` before review on non-trivial PRs.
 
 **Verify commands (root):** `npm run lint`, `npm run typecheck`, `npm run test`. Add Playwright per workspace scripts when introduced (see Section 12.3).
+
+**NFR-010:** Implement hooks and dashboards against **§5.1**; record metric IDs and tuning decisions in **implementation-log** after **T13**.
 
 ---
 
@@ -194,7 +222,7 @@ Quality gates:
 
 1. **Stage 0.5:** deploy API + web to staging; run **T14** automation + Section 12.5 manual matrix; enable production with **transcription disabled** and **static prompt** only.
 2. **Feature flags / config:** `STT_ENABLED`, `LLM_PROMPT_ENABLED`, `MAX_IMAGES` (1 → N), `VIDEO_ENABLED`—exact names are implementation details; document in [implementation-log.md](implementation-log.md).
-3. **Monitoring:** wire dashboards per [technical-design-v1.md](technical-design-v1.md) §3.3 (signer failures, finalize errors, stuck transcript jobs after **0.8**).
+3. **Monitoring:** wire dashboards per [technical-design-v1.md](technical-design-v1.md) §3.3; **threshold seeds** live in **§5.1** (tune post-baseline).
 4. **Health / readiness:** confirm load-balancer probes target **`GET /health`** and authenticated canary parameters match TDD when production canaries are added.
 
 **Rollback:**
@@ -213,6 +241,7 @@ Quality gates:
 | PHI in logs | Compliance | Metadata-only logging reviews (**Sec** on sensitive tickets) |
 | Multi-stage schema migrations | Medium | Forward-compatible schema in T2 (nullable transcript, media `type` enum) |
 | Offline duplicate saves | High — bad UX | Idempotency + tests (**T8**, **T12**) |
+| **FR-017** blocked on Dashboard JWT | Schedule slip for family/read interactions | Definition of ready in §6.2; track cross-repo milestone owner in **implementation-log** |
 
 ---
 
@@ -230,8 +259,14 @@ Quality gates:
 | **FR-015** | **T20** |
 | **FR-016** (groundwork) | **T21** |
 | **FR-019** | T2, T8, T9 |
-| **NFR-006**, **NFR-010** | T13 |
-| Video (multimedia) | **T19** |
+| **FR-017** | **T23** (blocked—§6.2 **Definition of ready**); tables stubbed per TDD §5 until epic runs |
+| **FR-018** | **T24** (blocked—after **T23** + product); column may ship with **T2** schema only until behavior lands |
+| **NFR-001** (HTTPS prod) | Infra/hosting—verify in **T22** rollout + environment config (not Memories-only ticket) |
+| **NFR-004**, **NFR-012** (a11y + elder UX) | T11, T15 (UX review), **§12.5–12.6**; wireframe states per [design-wireframe-v1.md](design-wireframe-v1.md) |
+| **NFR-006** | T13 |
+| **NFR-010** | T13 (**hooks**); **§5.1** (**threshold defaults**); **implementation-log** (**owners + metric IDs** after dashboards) |
+| **NFR-007** (BAAs) | Rollout **§9**, **T22**; blocks real PHI in prod vendors |
+| Video (multimedia; not telephony—see PRD out-of-scope) | **T19** |
 
 ---
 
@@ -245,7 +280,9 @@ Quality gates:
 
 ### 12.1 Skill-reading convention (required per prompt)
 
-Each prompt ends with **Skills to read first** naming `.cursor/skills/<name>/` folders. Add **`developer-security`** for JWT, signing, or audit changes. Add **`developer-senior`** only for high-risk tickets (authz, idempotency, cross-cutting contracts).
+Each prompt ends with **Skills to read first** naming `.cursor/skills/<name>/` folders. Lines are intentionally **lean** (lane + conditional extras per [development-plan-template.md](templates/development-plan-template.md) §12.1): add **`developer-security`** for JWT, signing, or audit boundaries; **`developer-unit-testing`** when the ticket **introduces or reshapes** suites; **`developer-quality-assurance`** / **`developer-manager`** only when the §6.2 ticket implies QA matrix or rollout ownership; **`developer-senior`** on high‑risk merges (authz, idempotency, cross-cutting contracts) or wherever §6.2 marks **Sr** as primary reviewer **before** merge.
+
+**Session defaults** (the Section 12 opening bullets above) apply to **every** prompt without repeating them on each card: **`developer-testing`** (how to run and triage CI/local tests) and **`developer-code-quality`** (structural pass before review — Section 8). That pairing satisfies the intent of broader “baseline skills” coordination in **`.cursor/skills/developer-manager/SKILL.md`** for **this repo**. Explicit **`developer-testing`** on **T14**-style prompts remains appropriate because those tickets own the harness expansion.
 
 Repository skill folders include: `developer-backend`, `developer-database`, `developer-frontend-ui`, `developer-frontend-data-sync`, `developer-security`, `developer-unit-testing`, `developer-testing`, `developer-quality-assurance`, `developer-senior`, `developer-manager`, `developer-code-quality`.
 
@@ -471,6 +508,30 @@ Staging→prod checklist: flags, secrets rotation, BAAs noted, dashboards, Secti
 
 ---
 
+#### Prompt T23 — **FR-017** Comments & reactions (**E12**; blocked)
+
+**Gate:** Complete **§6.2 Definition of ready** (Dashboard JWT claims for Appendix A roles; PM confirms no autonomous family create/delete).
+
+Implement API routes + persistence for **comments/reactions** per [technical-design-v1.md](technical-design-v1.md) Appendix A and data sketch §5; detail UI aligned with **[design-wireframe-v1.md](design-wireframe-v1.md)**; **audit_events** on PHI-bearing writes (**FR-019**). Deny reads/writes inconsistent with JWT.
+
+**Skills to read first:** `developer-backend`, `developer-database`, `developer-frontend-ui`, `developer-frontend-data-sync`, `developer-security`, `developer-senior`.
+
+**Verify:** Role-matrix tests (Guide vs Family); manual scenario in **§12.5** (“Later” row); CI green.
+
+---
+
+#### Prompt T24 — **FR-018** Sharing visibility (**E12**; blocked)
+
+**Gate:** **T23** merged or waived by PM **and** **`sharing_visibility`** semantics signed off.
+
+Persist and enforce **`sharing_visibility`** end-to-end (API validation + UI when product requires). Document default for legacy rows.
+
+**Skills to read first:** `developer-backend`, `developer-frontend-ui`, `developer-database`, `developer-security`.
+
+**Verify:** PATCH/create validation tests; UX copy review (**NFR-012**).
+
+---
+
 ### 12.3 Standard test commands
 
 Workspaces use **`@memories/web`** and **`@memories/api`** (see root `package.json`).
@@ -490,6 +551,7 @@ Workspaces use **`@memories/web`** and **`@memories/api`** (see root `package.js
 | **E9** | T17,T18 | Sr, QA, Sec (vendor) | Transcript states correct |
 | **E10** | T19 | Sr, QA | Video on supported devices documented |
 | **E11** | T20,T21 | Sec | Prompt/tags behind flags |
+| **E12** | T23,T24 | Sr, QA, Sec | **§6.2 Definition of ready** satisfied; Appendix A JWT parity; CI + manual §12.5 “Later” row |
 
 ### 12.5 Manual test execution matrix
 
@@ -501,8 +563,20 @@ Workspaces use **`@memories/web`** and **`@memories/api`** (see root `package.js
 | **0.7** | Upload audio file | T16 | Pick file, save | Playback matches record path | Manual / date |
 | **0.8** | Transcription | T17,T18 | Record audio; poll until ready | Text appears; failures readable | Manual / date |
 | **0.9** | Video | T19 | Capture short clip | Playback OK on target devices | Manual / date |
+| **Later** | **FR-017** / **FR-018** (when unblocked) | T23,T24 | Role-appropriate comment add/read; denial for wrong role; set visibility → family sees per policy | Matches Appendix A + PRD ; no PHI in notifications | Manual / date |
 
 **Pre-review code quality (applies across epics):** read `.cursor/skills/developer-code-quality/SKILL.md` before marking review-ready.
+
+### 12.6 Mobile automation standard
+
+PR merges that touch **`apps/web`** capture, list, or detail layouts should keep **narrow mobile smoke** in CI plus broader regressions on a documented cadence (aligns with [AGENTS.md](../AGENTS.md) and `.cursor/skills/development-planner/SKILL.md`).
+
+| Requirement | Detail |
+| --- | --- |
+| **Smoke paths** | Short flows on **viewport-sized** Chromium + WebKit projects: open list → FAB → capture **0.5** golden path steps through save (stub auth / test JWT as implemented). |
+| **PR gate** | Run Playwright **device/emulation profiles** covering **mobile Chrome** and **mobile Safari** class behavior (repo naming may vary—e.g. **`mobile-chrome`** + **`webkit`** / **`mobile-safari`** projects). Both must pass before merge when UI paths changed. |
+| **Artifacts** | On failure, attach **trace / HTML report** paths to the PR (see **`developer-testing`**). |
+| **Full regression** | Broader matrix (tablet, rotate, flaky network) **nightly** or **pre-release**, per team capacity—not every PR. |
 
 ---
 
@@ -511,3 +585,5 @@ Workspaces use **`@memories/web`** and **`@memories/api`** (see root `package.js
 | Version | Notes |
 | --- | --- |
 | 1.0 | Initial staged development plan (**0.5** prod slice → **1.0**); aligns to PRD v1.2 + TDD v1.2. |
+| 1.1 | Align linked-input versions (**PRD/TDD v1.3**); fix epic numbering (**E7–E11**); clarify **FR-017** / **FR-018**; trace **NFR-001**, **NFR-004**, **NFR-007**; add **§12.6** mobile standard; tighten quality gates (**§12.5–§12.6**, a11y). |
+| 1.2 | **§5.1** NFR-010 alerting starters; **E12** + **T23**/**T24** + Definition of ready; **§12.1** session-default vs lean **Skills** (developer-manager alignment); prompts **T23–T24**; **§12.4–12.5** **E12** / Later scenarios. |

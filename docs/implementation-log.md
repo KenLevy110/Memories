@@ -36,6 +36,13 @@ Each entry should include:
 
 ## Entries
 
+### 2026-04-30 - Development plan coordination (§5.1, E12/T23–T24, Skills policy)
+
+- **Area:** Docs
+- **Summary:** **`docs/development-plan-v1.md` v1.2** defines **§5.1 NFR-010** starter alerts, **§12.1** session-default vs lean **Skills**, **E12** + **T23**/**T24** (**FR-017**/**FR-018**) with **Definition of ready** and prompts. **`.cursor/skills/developer-manager/SKILL.md`** aligned. PRD/TDD **v1.4** cite **§5.1**.
+- **Touched:** `docs/development-plan-v1.md`, `docs/product-requirements-v1.md`, `docs/technical-design-v1.md`, `.cursor/skills/developer-manager/SKILL.md`, `docs/implementation-log.md`
+- **Follow-ups:** Fill **Decision owner** column in §5.1 table; unblock **T23** with Dashboard JWT + PM gate.
+
 ### 2026-04-30 - Remove `docs/examples` (foreign multi-list samples)
 
 - **Area:** Docs

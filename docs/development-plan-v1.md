@@ -368,6 +368,8 @@ Implement `POST /api/v1/uploads/images/sign` with MIME/size constraints (**FR-01
 
 **Verify:** Contract tests + happy path signer mock.
 
+DONE 2026-04-30
+
 ---
 
 #### Prompt T6 — Audio upload sign endpoint
@@ -589,7 +591,7 @@ Workspaces use `**@memories/web`** and `**@memories/api**` (see root `package.js
 
 ### 12.5 Manual test execution matrix
 
-**How to use this matrix:** Rows are ordered **roughly** by dependency (API spine → signing → CRUD → web shell → capture → hardening). **Sign off** a row in the **Sign-off** column when its **Related tickets** are done and **Steps** pass in a suitable environment (local, staging, or ephemeral). **Stage 0.5** production still requires **every** **0.5** row below **and** the **T22** release checklist—not only the capture row. Rows without **T10**–**T12** may use **REST** or **curl** / API client plus seeded or synthetic JWTs; **T10**+ rows exercise the browser.
+**How to use this matrix:** Rows are ordered **roughly** by dependency (API spine → signing → CRUD → web shell → capture → hardening). **Related tickets** names every ticket whose work the **Steps** assume; treat the row as **runnable and sign-offable only after all** of those tickets are merged (for example **T4,T9** needs list/detail routes from **T9**, not authz alone from **T4**). **Sign off** in the **Sign-off** column when **Steps** pass in a suitable environment (local, staging, or ephemeral). **Stage 0.5** production still requires **every** **0.5** row below **and** the **T22** release checklist—not only the capture row. Rows without **T10**–**T12** may use **REST** or **curl** / API client plus seeded or synthetic JWTs; **T10**+ rows exercise the browser.
 
 
 | Epic      | Scenario                                 | Related tickets | Steps                                                                                             | Expected result                                   | Sign-off      |
@@ -637,6 +639,6 @@ PR merges that touch `**apps/web`** capture, list, or detail layouts should keep
 | 1.1     | Align linked-input versions (**PRD/TDD v1.3**); fix epic numbering (**E7–E11**); clarify **FR-017** / **FR-018**; trace **NFR-001**, **NFR-004**, **NFR-007**; add **§12.6** mobile standard; tighten quality gates (**§12.5–§12.6**, a11y). |
 | 1.2     | **§5.1** NFR-010 alerting starters; **E12** + **T23**/**T24** + Definition of ready; **§12.1** session-default vs lean **Skills** (developer-manager alignment); prompts **T23–T24**; **§12.4–12.5** **E12** / Later scenarios.              |
 | 1.3     | **§12.2** heading **T1–T24**; Session defaults ↔ **§12.5** (template alignment); template cross-refs (**§12.2** prompts, **§12.5** code-quality tie) synced with `**development-plan-template`** + `**development-planner**`.                |
-| 1.5     | **§12.5** expanded **0.5** manual matrix (incremental API/web/ops rows + execution note); **§8** manual-scenario bullet aligned; **§12.5** intro clarifies sign-off vs stage gate.                                                          |
+| 1.5     | **§12.5** expanded **0.5** manual matrix (incremental API/web/ops rows + execution note); **§8** manual-scenario bullet aligned; **§12.5** intro clarifies sign-off vs stage gate and **Related tickets** = **all** merged before a row is runnable/sign-offable. |
 
 

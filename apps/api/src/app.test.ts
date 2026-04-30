@@ -56,6 +56,7 @@ describe("api auth shell", () => {
   let app: ReturnType<typeof buildApp>;
   let closeJwksServer = async () => {};
   let privateKey: Awaited<ReturnType<typeof generateKeyPair>>["privateKey"];
+  const signedImageUploadUrl = "https://signed-upload.memories.test/put";
 
   beforeAll(async () => {
     const keyPair = await generateKeyPair("RS256");
@@ -74,6 +75,16 @@ describe("api auth shell", () => {
         audience,
         jwksUri: jwksServer.jwksUri,
       },
+      imageUploadMaxBytes: 2_000_000,
+      uploadSigner: async ({ practiceId, mediaId, mimeType, byteSize }) => ({
+        uploadUrl: signedImageUploadUrl,
+        storageKey: `${practiceId}/uploads/images/${mediaId}`,
+        expiresAt: "2026-05-01T00:00:00.000Z",
+        requiredHeaders: {
+          "content-type": mimeType,
+          "content-length": String(byteSize),
+        },
+      }),
     });
 
     app.get("/api/v1/test/clients/:clientId/memories", async (request) => {
@@ -267,6 +278,103 @@ describe("api auth shell", () => {
       method: "GET",
       url: "/api/v1/test/memories/c5e0926f-eeb8-49f8-808d-63f8862eb373",
       headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(res.statusCode).toBe(403);
+    const body = JSON.parse(res.body) as { code: string };
+    expect(body.code).toBe("FORBIDDEN");
+  });
+
+  it("returns signed image upload URL for allowed mime and size", async () => {
+    const token = await createToken({
+      user_id: "bdaf5f58-c38a-4f4a-91e5-d8dff7f40a81",
+      practice_id: "d5f8f8d6-3128-4ac2-9fe9-79e3ba0ceeba",
+      roles: ["GUIDE"],
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/uploads/images/sign",
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        mime_type: "image/jpeg",
+        byte_size: 512_000,
+      },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body) as {
+      media_id: string;
+      storage_key: string;
+      upload_url: string;
+      upload_method: string;
+      required_headers: Record<string, string>;
+    };
+    expect(body.media_id.length).toBeGreaterThan(0);
+    expect(body.storage_key).toContain("d5f8f8d6-3128-4ac2-9fe9-79e3ba0ceeba/uploads/images/");
+    expect(body.upload_url).toBe(signedImageUploadUrl);
+    expect(body.upload_method).toBe("PUT");
+    expect(body.required_headers["content-type"]).toBe("image/jpeg");
+  });
+
+  it("returns 400 for disallowed image mime type", async () => {
+    const token = await createToken({
+      user_id: "52f47ac5-40d7-4fbd-b311-3aa7124f3770",
+      practice_id: "dfdf0043-9f0d-45a0-8de0-d351793f26c2",
+      roles: ["GUIDE"],
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/uploads/images/sign",
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        mime_type: "image/gif",
+        byte_size: 100_000,
+      },
+    });
+
+    expect(res.statusCode).toBe(400);
+    const body = JSON.parse(res.body) as { code: string };
+    expect(body.code).toBe("UNSUPPORTED_MEDIA_TYPE");
+  });
+
+  it("returns 400 when image size exceeds configured limit", async () => {
+    const token = await createToken({
+      user_id: "fd313a5f-1068-4a92-a855-0be3418fd852",
+      practice_id: "8cf4f445-2ecf-441a-b613-dbb2fbc791d7",
+      roles: ["GUIDE"],
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/uploads/images/sign",
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        mime_type: "image/png",
+        byte_size: 2_000_001,
+      },
+    });
+
+    expect(res.statusCode).toBe(400);
+    const body = JSON.parse(res.body) as { code: string };
+    expect(body.code).toBe("IMAGE_TOO_LARGE");
+  });
+
+  it("returns 403 for image signing when practice scope is missing", async () => {
+    const token = await createToken({
+      user_id: "d16b7f72-31e8-44db-8af1-8f0a81355c6d",
+      roles: ["GUIDE"],
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/uploads/images/sign",
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        mime_type: "image/webp",
+        byte_size: 200_000,
+      },
     });
 
     expect(res.statusCode).toBe(403);

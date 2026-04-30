@@ -17,6 +17,16 @@ const logLevel =
 const API_PREFIX = "/api/v1";
 const HEALTH_PATH = "/health";
 const CLIENT_SELF_ROLE = "CLIENT_SELF";
+const DEFAULT_IMAGE_UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
+const DEFAULT_UPLOAD_URL_TTL_SECONDS = 5 * 60;
+const DEFAULT_UPLOAD_SIGN_ORIGIN = "https://uploads.memories.local";
+const ALLOWED_IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+]);
 
 type JwtAuthConfig = {
   issuer: string;
@@ -26,9 +36,22 @@ type JwtAuthConfig = {
 
 type BuildAppOptions = {
   jwtAuth?: JwtAuthConfig;
+  imageUploadMaxBytes?: number;
+  uploadSigner?: UploadSigner;
 };
 
 type JwtVerifier = (token: string) => Promise<JWTPayload>;
+type UploadSigner = (input: {
+  practiceId: string;
+  mediaId: string;
+  mimeType: string;
+  byteSize: number;
+}) => Promise<{
+  uploadUrl: string;
+  storageKey: string;
+  expiresAt: string;
+  requiredHeaders: Record<string, string>;
+}>;
 
 class HttpError extends Error {
   public readonly statusCode: number;
@@ -229,6 +252,145 @@ function normalizePath(url: string): string {
   return url.split("?", 1)[0] ?? url;
 }
 
+function resolveImageUploadMaxBytes(options?: BuildAppOptions): number {
+  const fromOption = options?.imageUploadMaxBytes;
+  if (
+    typeof fromOption === "number" &&
+    Number.isFinite(fromOption) &&
+    Number.isInteger(fromOption) &&
+    fromOption > 0
+  ) {
+    return fromOption;
+  }
+
+  const fromEnvRaw = process.env["IMAGE_UPLOAD_MAX_BYTES"];
+  if (!fromEnvRaw) {
+    return DEFAULT_IMAGE_UPLOAD_MAX_BYTES;
+  }
+
+  const fromEnv = Number(fromEnvRaw);
+  if (!Number.isFinite(fromEnv) || !Number.isInteger(fromEnv) || fromEnv <= 0) {
+    return DEFAULT_IMAGE_UPLOAD_MAX_BYTES;
+  }
+
+  return fromEnv;
+}
+
+function resolveUploadSignOrigin(): string {
+  const fromEnv = process.env["UPLOAD_SIGN_ORIGIN"];
+  if (fromEnv && fromEnv.trim().length > 0) {
+    return fromEnv.trim();
+  }
+  return DEFAULT_UPLOAD_SIGN_ORIGIN;
+}
+
+function createDefaultUploadSigner(): UploadSigner {
+  const origin = resolveUploadSignOrigin();
+
+  return async ({ practiceId, mediaId, mimeType, byteSize }) => {
+    const expiresAt = new Date(
+      Date.now() + DEFAULT_UPLOAD_URL_TTL_SECONDS * 1000,
+    ).toISOString();
+    const storageKey = `${practiceId}/uploads/images/${mediaId}`;
+    const url = new URL(
+      storageKey,
+      origin.endsWith("/") ? origin : `${origin}/`,
+    );
+    url.searchParams.set("expires_at", expiresAt);
+    url.searchParams.set("mime_type", mimeType);
+    url.searchParams.set("byte_size", String(byteSize));
+    url.searchParams.set("signature", randomUUID().replace(/-/g, ""));
+
+    return {
+      uploadUrl: url.toString(),
+      storageKey,
+      expiresAt,
+      requiredHeaders: {
+        "content-type": mimeType,
+      },
+    };
+  };
+}
+
+function parseImageUploadSignBody(
+  body: unknown,
+  maxImageUploadBytes: number,
+): { mimeType: string; byteSize: number } {
+  if (!body || typeof body !== "object") {
+    throw new HttpError(400, "VALIDATION_ERROR", "Request body must be an object.");
+  }
+
+  const payload = body as Record<string, unknown>;
+  const mimeTypeRaw = payload["mime_type"];
+  const byteSizeRaw = payload["byte_size"];
+
+  if (typeof mimeTypeRaw !== "string" || mimeTypeRaw.trim().length === 0) {
+    throw new HttpError(400, "VALIDATION_ERROR", "mime_type is required.");
+  }
+  const mimeType = mimeTypeRaw.trim().toLowerCase();
+  if (!ALLOWED_IMAGE_MIME_TYPES.has(mimeType)) {
+    throw new HttpError(
+      400,
+      "UNSUPPORTED_MEDIA_TYPE",
+      "Unsupported image mime_type.",
+    );
+  }
+
+  if (
+    typeof byteSizeRaw !== "number" ||
+    !Number.isFinite(byteSizeRaw) ||
+    !Number.isInteger(byteSizeRaw) ||
+    byteSizeRaw <= 0
+  ) {
+    throw new HttpError(400, "VALIDATION_ERROR", "byte_size must be a positive integer.");
+  }
+  const byteSize = byteSizeRaw;
+  if (byteSize > maxImageUploadBytes) {
+    throw new HttpError(
+      400,
+      "IMAGE_TOO_LARGE",
+      `byte_size exceeds ${maxImageUploadBytes}.`,
+    );
+  }
+
+  return { mimeType, byteSize };
+}
+
+function requirePracticeIdForProtectedRoute(request: {
+  id: string;
+  method: string;
+  url: string;
+  auth: JWTPayload | null;
+  log: { warn: (payload: Record<string, unknown>, message: string) => void };
+}): string {
+  if (!request.auth) {
+    throw new HttpError(401, "UNAUTHORIZED", "Bearer token is required.");
+  }
+
+  const practiceId = readStringClaim(request.auth, "practice_id");
+  if (!practiceId) {
+    request.log.warn(
+      {
+        event: "authz_denied",
+        reason: "missing_practice_scope",
+        status_code: 403,
+        request_id: request.id,
+        method: request.method,
+        route: normalizePath(request.url),
+        actor_hash: hashActorId(readStringClaim(request.auth, "user_id")),
+      },
+      "Authorization denied.",
+    );
+    throw new HttpError(
+      403,
+      "FORBIDDEN",
+      "Insufficient permissions for requested resource.",
+    );
+  }
+
+  return practiceId;
+}
+
 function resolveJwtAuthConfig(options?: BuildAppOptions): JwtAuthConfig {
   const issuer = options?.jwtAuth?.issuer ?? process.env["JWT_ISSUER"];
   const audience = options?.jwtAuth?.audience ?? process.env["JWT_AUDIENCE"];
@@ -293,6 +455,8 @@ function toStatusCode(error: unknown): number {
 
 export function buildApp(options?: BuildAppOptions) {
   const jwtVerifier = createJwtVerifier(resolveJwtAuthConfig(options));
+  const imageUploadMaxBytes = resolveImageUploadMaxBytes(options);
+  const uploadSigner = options?.uploadSigner ?? createDefaultUploadSigner();
 
   const app = Fastify({
     logger: {
@@ -384,6 +548,39 @@ export function buildApp(options?: BuildAppOptions) {
       service: "memories-api",
       version: "v1" as const,
     };
+  });
+
+  app.post(`${API_PREFIX}/uploads/images/sign`, async (request) => {
+    const practiceId = requirePracticeIdForProtectedRoute(request);
+    const { mimeType, byteSize } = parseImageUploadSignBody(
+      request.body as unknown,
+      imageUploadMaxBytes,
+    );
+    const mediaId = randomUUID();
+
+    try {
+      const signed = await uploadSigner({
+        practiceId,
+        mediaId,
+        mimeType,
+        byteSize,
+      });
+
+      return {
+        media_id: mediaId,
+        storage_key: signed.storageKey,
+        upload_url: signed.uploadUrl,
+        upload_method: "PUT" as const,
+        required_headers: signed.requiredHeaders,
+        expires_at: signed.expiresAt,
+      };
+    } catch (error) {
+      request.log.error(
+        { err: error, request_id: request.id },
+        "Image upload signer unavailable.",
+      );
+      throw new HttpError(503, "SIGNER_UNAVAILABLE", "Unable to issue upload URL.");
+    }
   });
 
   return app;

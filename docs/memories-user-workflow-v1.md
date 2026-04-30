@@ -8,7 +8,7 @@
 | **Used by** | [product-requirements-v1.md](product-requirements-v1.md), [technical-design-v1.md](technical-design-v1.md), [design-wireframe-v1.md](design-wireframe-v1.md) |
 | **Screenshots** | `docs/assets/workflow-screenshots/*.png` (7 steps, committed to repo) |
 | **Last updated** | 2026-04-30 |
-| **Routing (web)** | **TanStack Router**; capture = one path + **`?step=`** (see below); canonical detail in [technical-design-v1.md](technical-design-v1.md) §3.1 |
+| **Routing (web)** | **TanStack Router**; capture = one path + **`?step=`** (see below); canonical detail + REST addendum in [technical-design-v1.md](technical-design-v1.md) §§3.1–3.2 |
 
 ---
 
@@ -40,7 +40,7 @@ Implementation uses a **single capture URL** with a query parameter so refresh a
 | Review and save | `/clients/:clientId/capture?step=review` |
 | Success | `/clients/:clientId/capture?step=done` |
 
-REST APIs for each step are listed in [technical-design-v1.md](technical-design-v1.md) §3.1 (`/api/v1/...`).
+REST APIs for each step (plus the explicit route addendum) are listed in [technical-design-v1.md](technical-design-v1.md) §§3.1–3.2 (`/api/v1/...`).
 
 ---
 
@@ -153,15 +153,15 @@ Use for quick reviews when PNGs are not open. Boxes = major regions, not pixel-a
 
 ## PRD / TDD trace (quick)
 
-| UI step | PRD (examples) | TDD §3.1 (v1.1) |
+| UI step | PRD (examples) | TDD §§3.1–3.2 |
 | --- | --- | --- |
 | Photo / library | **FR-005**, **FR-011** | `?step=photo` → `POST /api/v1/uploads/images/sign` + PUT; IndexedDB draft |
 | Name / room | **FR-007** | `?step=meta`; client-only draft until finalize |
-| Prompt | **FR-015** | `?step=prompt` → `POST /api/v1/memories/suggest_prompt` |
-| Record / playback | **FR-006**, **FR-008**, **FR-009** | `?step=record` → audio sign + PUT; transcript poll on detail |
-| Review / tags | **FR-016**, **FR-017** (phased) | `?step=review` → `POST /api/v1/memories` |
+| Prompt | **FR-015** | `?step=prompt` → `POST /api/v1/clients/:clientId/memories/suggest_prompt` |
+| Record / playback | **FR-006**, **FR-008**, **FR-009** | `?step=record` → audio sign + PUT; detail uses `POST /api/v1/memory-media/:mediaId/sign-read` for playback |
+| Review / tags | **FR-016**, **FR-017** (phased) | `?step=review` → `POST /api/v1/clients/:clientId/memories` |
 | Save | **FR-013**, **FR-014**, **FR-019** | Idempotency key; offline queue; audit |
-| Success | **FR-002** | `?step=done`; optional `GET /api/v1/memories/:id` |
+| Success | **FR-002** | `?step=done`; optional `GET /api/v1/clients/:clientId/memories/:memoryId` |
 | List | **FR-010**, **FR-012** | `GET /api/v1/clients/:clientId/memories?cursor=` |
 | Simplicity | **NFR-012** | [design-wireframe-v1.md](design-wireframe-v1.md); copy and touch targets |
 
@@ -169,7 +169,7 @@ Use for quick reviews when PNGs are not open. Boxes = major regions, not pixel-a
 
 ## Related work
 
-1. **Technical design:** **[technical-design-v1.md](technical-design-v1.md)** §3.1 — keep routes and APIs in sync when the flow changes.  
+1. **Technical design:** **[technical-design-v1.md](technical-design-v1.md)** §§3.1–3.3 — keep routes, APIs, and observability playbook in sync when the flow changes.  
 2. **Wireframes:** supplementary states in **[design-wireframe-v1.md](design-wireframe-v1.md)**; this doc stays the **hi-fi** reference.
 
 Screenshots live under `docs/assets/workflow-screenshots/` as committed files.

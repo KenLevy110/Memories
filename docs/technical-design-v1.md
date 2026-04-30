@@ -7,11 +7,11 @@
 | **Author** | Ken Levy |
 | **Engineering owner** | Ken Levy |
 | **Status** | Approved |
-| **Version** | 1.1 |
+| **Version** | 1.2 |
 | **Edition** | **v1** — filename `technical-design-v1.md` (use `-v2.md` etc. for major rewrites) |
 | **Last updated** | 2026-04-30 |
 | **Template used** | `docs/templates/technical-design-template.md` (structure); content scoped to Memories |
-| **Related PRD** | [product-requirements-v1.md](product-requirements-v1.md) v1.0 |
+| **Related PRD** | [product-requirements-v1.md](product-requirements-v1.md) v1.2 |
 | **Related docs** | [memories-user-workflow-v1.md](memories-user-workflow-v1.md); [design-wireframe-v1.md](design-wireframe-v1.md); [tech-stack.md](tech-stack.md); [implementation-log.md](implementation-log.md); [adr/README.md](adr/README.md); [ADR-20260430-memories-platform-boundary-auth-routing.md](adr/ADR-20260430-memories-platform-boundary-auth-routing.md); [Prototype Backend Engineering Handoff.md](Prototype%20Backend%20Engineering%20Handoff.md) |
 
 ---
@@ -81,11 +81,41 @@ All memory APIs must enforce **tenant + client access** (**FR-012**).
 | 0 | **ML1** | Client **Memories** tab (list + FAB) | `GET /clients/:clientId/memories` | `GET /api/v1/clients/:clientId/memories?cursor=` (cursor pagination **FR-010**) | **FR-010**, **FR-012** |
 | 1 | **MC1** | Photograph | `/clients/:clientId/capture?step=photo` | `POST /api/v1/uploads/images/sign` → client **PUT** to object storage; draft in **IndexedDB** | **FR-005**, **FR-011**, **FR-014** |
 | 2 | **MC2** | Name & room | `?step=meta` | Draft stays **client-only** until finalize; **Guide** requires room, **consumer** optional (PRD) | **FR-007** |
-| 3a | **MC3** | Story prompt (pre-record) | `?step=prompt` | `POST /api/v1/memories/suggest_prompt` (handoff §6.2); **~1.8s timeout** + static fallback | **FR-015**, **NFR-005**, **NFR-009** |
+| 3a | **MC3** | Story prompt (pre-record) | `?step=prompt` | `POST /api/v1/clients/:clientId/memories/suggest_prompt` (handoff §6.2); **~1.8s timeout** + static fallback | **FR-015**, **NFR-005**, **NFR-009** |
 | 3b | **MC4** | Recording | `?step=record` | `MediaRecorder`; `POST /api/v1/uploads/audio/sign` → **PUT**; websocket **not** MVP | **FR-006**, **FR-014** |
-| 4 | **MC5** | Review & save | `?step=review` | `POST /api/v1/memories` idempotent (**FR-013**): keys, metadata, tags; server assigns `memory_id`, enqueues STT job | **FR-008**, **FR-009**, **FR-016**, **FR-019** |
-| 5 | **MC6** | Success | `?step=done` | Optional `GET /api/v1/memories/:id` prefetch | **FR-002** |
+| 4 | **MC5** | Review & save | `?step=review` | `POST /api/v1/clients/:clientId/memories` idempotent (**FR-013**): keys, metadata; server assigns `memory_id`, enqueues STT job | **FR-001**, **FR-008**, **FR-009**, **FR-013**, **FR-019** |
+| 5 | **MC6** | Success | `?step=done` | Optional `GET /api/v1/clients/:clientId/memories/:memoryId` prefetch (+ transcript poll if needed) | **FR-002** |
 | 6 | **ML1** | Return to list | navigate to list route | `GET` list | **FR-010** |
+
+### 3.2 API route addendum (explicit MVP contract)
+
+Canonical patterns below are authoritative for Memories `apps/api` v1 naming; implementations may tighten response shapes behind `packages/shared`.
+
+| Capability | Method + path | Notes | PRD |
+| --- | --- | --- | --- |
+| List memories | `GET /api/v1/clients/:clientId/memories?cursor=` | Cursor pagination, recency default | **FR-010**, **FR-012** |
+| Get memory detail | `GET /api/v1/clients/:clientId/memories/:memoryId` | Returns metadata + media descriptors + transcript state; emits short-lived playback URLs via sign-read endpoints | **FR-002**, **FR-012** |
+| Create memory | `POST /api/v1/clients/:clientId/memories` | Idempotent finalize; optional user-supplied tags on create (`MemoryTag`), but FR-016’s **automatic suggestion loop** stays P2 | **FR-001**, **FR-008**, **FR-013**, **FR-016** |
+| Update memory | `PATCH /api/v1/clients/:clientId/memories/:memoryId` | Allowed fields by role/matrix; metadata-only audit | **FR-003**, **FR-012**, **FR-019** |
+| Delete memory | `DELETE /api/v1/clients/:clientId/memories/:memoryId` | Soft-delete in v1 unless storage policy dictates otherwise | **FR-004**, **FR-012**, **FR-019** |
+| Sign image upload | `POST /api/v1/uploads/images/sign` | Short-lived upload URL constrained to MIME/size (**FR-011**) | **FR-005**, **FR-011**, **FR-014** |
+| Sign audio upload | `POST /api/v1/uploads/audio/sign` | Short-lived upload URL (**FR-006**) | **FR-006**, **FR-014** |
+| Sign playback media | `POST /api/v1/memory-media/:mediaId/sign-read` | Separate from upload signing; denies when caller lacks playback rights (**NFR-002**) | **FR-002**, **FR-012**, **NFR-002** |
+| Suggest prompt | `POST /api/v1/clients/:clientId/memories/suggest_prompt` | Scoped to `:clientId` for consistent authz auditing; timeout (~1.8s) plus static fallback | **FR-015**, **NFR-005**, **NFR-009** |
+| Transcript status/detail | `GET /api/v1/clients/:clientId/memories/:memoryId/transcript` | Lightweight poll contract for transcript job state/output when ready (**FR-009**); optional merge into detail response | **FR-008**, **FR-009**, **FR-012** |
+
+**FR-016 nuance:** treat **automatic tag suggestions post-transcript** as **P2** unless pulled forward; MVP may still persist curator-supplied tag arrays via create/update payloads when policy allows.
+
+### 3.3 Alerting playbook (recommended defaults)
+
+Operational alerts should live beside the Memories service dashboards (infra provider or SaaS observability), not silently inside logs only (**NFR-010**):
+
+- Synthetic API checks for `GET /health` baseline plus authenticated smoke on `GET /api/v1/clients/:demoClientId/memories?cursor=` in staging/production canaries.
+- Error budget burn on `POST /api/v1/uploads/images/sign`, `POST /api/v1/uploads/audio/sign`, `POST /api/v1/clients/:clientId/memories`, and worker failure rates (transcripts stuck pending > SLA).
+- Latency anomaly detection on prompt path (`POST /api/v1/clients/:clientId/memories/suggest_prompt`) near the configured timeout.
+- Object storage signer failures surfaced as Sev2 until resolved—upload path is pilot-critical (**FR-014**).
+
+Escalations and paging policy stay with platform ops unless explicitly delegated—Memories publishes metric names + thresholds referenced from `development-plan.md` once published.
 
 **Global chrome (all MC\*):** facilitator strip (“Facilitating for …”) from auth context + `clientId`; no PII in analytics payloads (**NFR-006**, handoff §10.3).
 
@@ -104,10 +134,10 @@ All memory APIs must enforce **tenant + client access** (**FR-012**).
 | **FR-011** | §7 validation + client resize policy |
 | **FR-012** | §2 identity; §6 **app-layer** authorization (no RLS v1); Appendix A |
 | **FR-013**–**FR-014** | §7 idempotency keys; §8 offline queue (IndexedDB); no server draft PATCH v1 |
-| **FR-015** | §3.1 suggest_prompt; §7 LLM adapter + timeout + fallback (**NFR-009**) |
-| **FR-016**–**FR-018** | §5 tags + visibility enum |
+| **FR-015** | §3.2 suggest_prompt (`POST …/clients/:clientId/memories/suggest_prompt`); §7 LLM adapter + timeout + fallback (**NFR-009**) |
+| **FR-016**–**FR-018** | §3.2 + §5 tags + visibility enum; transcript state in v1, automatic tag suggestion loop deferred to P2 unless reprioritized |
 | **FR-019** | §7 audit: Postgres append-only `audit_events` (metadata only) |
-| **NFR-001**–**NFR-010** | §7 infra, logging, observability, alerts |
+| **NFR-001**–**NFR-010** | §3.3 + §7 infra, logging, observability, alerts |
 | **NFR-003** | **SLOs (v1 targets):** non-AI read APIs **p95 < 500 ms** under nominal load (excludes cold start); `suggest_prompt` bounded by **~1.8s** server timeout; STT remains async per PRD |
 | **NFR-011** | [AGENTS.md](../AGENTS.md) coverage targets; CI gates |
 | **NFR-012** | [design-wireframe-v1.md](design-wireframe-v1.md) density + component guidelines for eng |
@@ -145,10 +175,22 @@ Align with handoff Section 4.2 (migration naming may differ):
 
 ## 7. Security, privacy, logging
 
-- **TLS** end-to-end (**NFR-001**); object access via **short-lived signed URLs** (**NFR-002**).
-- **Logs:** structured JSON; **metadata only**—no transcript text, names in URLs, or base64 media (**NFR-006**).
+- **JWT trust model:** Every `/api/v1/...` route requires Bearer JWT verification (JWKS-backed) aside from deliberately unauthenticated health/doc probes surfaced at the deployment edge (**NFR-001**).
+- **Transport + object hygiene:** HTTPS end-to-end; **short-lived signed URLs** gate object reads/writes; scope URLs to MIME + byte limits before issuing (**NFR-002**).
+- **Logs:** structured JSON; **metadata only**—never log transcript bodies, captions, OCR text, or base64 payloads (**NFR-006**). HTTP access logs sanitize query strings that might carry PHI.
 - **AI calls:** minimum necessary fields; delimiter wrapping for user content; **zero-retention** or equivalent per vendor contract (**NFR-009**); **stub** LLM in non-prod when keys absent.
-- **Audit:** memory PHI writes to **append-only Postgres** `audit_events` (and optional future SIEM mirror) (**FR-019**, **NFR-008**).
+- **Audit + observability parity:** PHI-bearing memory mutations append to Postgres `audit_events`; repeated **401/403** responses emit security logs with hashed actor + correlation IDs (**NFR-008**).
+- **Platform split:** Memories ships service-level dashboards + alerts (**§3.3**); aggregated SIEM routing can remain optional if platform already centralizes ingestion (**NFR-010**).
+
+### JWT-only authorization hardening checklist
+
+- Mandatory claim validation (`iss`, `aud`, `exp`, `nbf` when present); reject tokens missing practice + client linkage when the route scopes to `:clientId`.
+- Bind route parameters (`:clientId`, `:memoryId`) to JWT claims/principal lists—never trust client-supplied identifiers without cross-check (**FR-012**).
+- Rotate signing keys gracefully (JWKS cache refresh + pinning tests) and version breaking claim changes behind coordinated Dashboard releases.
+
+### Accessibility co-design cues
+
+Implementations must defer to [design-wireframe-v1.md](design-wireframe-v1.md) for empty / loading / offline / transcription-failed states (`ML1`, `MC*`). Wireframes express **large controls + plain-language copy** mandated by **NFR-004** + **NFR-012**.
 
 ---
 
@@ -156,7 +198,7 @@ Align with handoff Section 4.2 (migration naming may differ):
 
 Per handoff Sections 2.5 and 5.1:
 
-- Client maintains **working memory** in **IndexedDB** (draft id, photo blob ref, audio blob ref, metadata) until **`POST /api/v1/memories`** succeeds. **No** server draft PATCH in v1.
+- Client maintains **working memory** in **IndexedDB** (draft id, photo blob ref, audio blob ref, metadata) until **`POST /api/v1/clients/:clientId/memories`** succeeds. **No** server draft PATCH in v1.
 - **Retries:** exponential backoff, up to **24h** window (product); **Background Sync** where supported + foreground retry when app opens.
 - **Idempotency:** `Idempotency-Key` header (or client-generated UUID in body) on create (**FR-013**).
 
@@ -170,12 +212,15 @@ Authoritative narrative: [ADR-20260430-memories-platform-boundary-auth-routing.m
 | --- | --- |
 | Router | **TanStack Router** |
 | Stepper routing | **Single capture route + `?step=`** (`photo` \| `meta` \| `prompt` \| `record` \| `review` \| `done`) |
-| Transcript updates to client | **Poll** on detail / pending UI for v1; SSE optional later |
+| Transcript updates to client | **Poll** (`GET …/transcript` or consolidated detail payloads) on detail/pending UI for v1; SSE optional later |
+| Transcript + tag scope | v1 delivers async transcription + statuses; automated tag suggestions remain **P2** aligned with FR-016 priority |
+| Playback signing | Dedicated `memory-media/:id/sign-read` keeps least-privilege object reads separate from uploads |
 | RLS | **App-layer authz v1**; RLS when justified by new DB access patterns |
 | ORM | **Drizzle** |
 | Draft lifecycle | **IndexedDB only** until idempotent finalize `POST` |
 | Jobs | **Postgres job rows** + worker |
 | API prefix | **`/api/v1/`** |
+| JWT-only enforcement | Accepted for v1 with checklist in §7; optional minimal scope caches only if JWKS outage risk demands it |
 
 ---
 
@@ -197,7 +242,18 @@ Source: handoff **§7.2** (indicative; product may refine). **Guide notes / mess
 | Edit memory (name, tags) | ✓ | ✓ | ✓ (own comments) | ✓ (own comments) |
 | Delete memory | ✓ | — | — | — |
 
+**Family roles:** default MVP ships **family read/edit comments per matrix**, **without** autonomous create/delete. Any future family capture/delete requires PRD uplift + Appendix A revisions + JWT claim coverage from Dashboard.
+
 Enforcement: **application code** + tests; must match platform `ClientAccess` semantics when claims are sourced from the Dashboard.
+
+---
+
+## 12. Delivery coordination (AI-assisted default)
+
+Everything in Memories can be agent-implemented locally, yet **coordination artifacts still need anchors**:
+
+- Tie environment-specific unblockers (JWT claim schema, vendor creds, alert routing) to a **Decision owner** column inside `development-plan.md` once published.
+- Use **delivery targets** (“complete by sprint X / week of …”) sparingly—only for contractual/legal gates (BAAs), cross-repo interfaces, or customer pilot commitments.
 
 ---
 
@@ -208,3 +264,4 @@ Enforcement: **application code** + tests; must match platform `ClientAccess` se
 | 0.1 | 2026-04-22 | Initial TDD: UI workflow map, traceability, data sketch, offline/security notes |
 | 1.0 / file v1 | 2026-04-22 | Renamed to `technical-design-v1.md`; doc version 1.0 |
 | 1.1 | 2026-04-30 | Approved; locked routes, SoR split, JWT, poll, Drizzle, job queue, appendix matrix; ADR-20260430 |
+| 1.2 | 2026-04-30 | API addendum routes, alerting guidance, clarified transcript/tag MVP scope, JWT hardening checklist, observability responsibilities, appendix family note |

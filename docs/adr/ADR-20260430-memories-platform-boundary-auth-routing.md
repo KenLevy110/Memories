@@ -26,9 +26,9 @@ The Memories service must integrate with the broader Ohana platform (Dashboard, 
 
 3. **Authorization in Postgres:** **Application-layer checks** on every route and query (tenant + client access, aligned with handoff permission intent). **Postgres RLS** is **not** required for v1; it may be added later if the same database gains additional writers or direct SQL consumers.
 
-4. **HTTP API surface:** Versioned prefix **`/api/v1/`**; **`clientId` in path** where the UI is client-scoped. Concrete paths are defined in [technical-design-v1.md](../technical-design-v1.md) §3.1.
+4. **HTTP API surface:** Versioned prefix **`/api/v1/`**; **`clientId` in path** where the UI is client-scoped. Canonical routes—including explicit CRUD, upload/sign, transcript poll, playback signing, and alerting guidance—live in **[technical-design-v1.md](../technical-design-v1.md)** §§3.1–3.3.
 
-5. **Capture draft lifecycle:** **Client-only** draft in **IndexedDB** until **`POST /api/v1/memories`** succeeds; **no** server-side draft PATCH for v1. **Idempotency** via `Idempotency-Key` (or equivalent) on create.
+5. **Capture draft lifecycle:** **Client-only** draft in **IndexedDB** until **`POST /api/v1/clients/:clientId/memories`** succeeds; **no** server-side draft PATCH for v1. **Idempotency** via `Idempotency-Key` (or equivalent) on create.
 
 6. **Transcription pipeline:** **Job rows in PostgreSQL** (`pending` → `processing` → terminal states) plus a **worker** (separate process or scheduled runner) invoking the STT integration. **STT vendor** is chosen behind an **interface** once BAAs and cloud alignment allow; implementation uses **fake/stub adapters** in CI and local dev.
 

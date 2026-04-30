@@ -9,6 +9,9 @@
   "scripts": {
     "dev:web": "npm run dev --workspace=@memories/web",
     "dev:api": "npm run dev --workspace=@memories/api",
+    "db:dev:setup": "powershell -ExecutionPolicy Bypass -File ./scripts/setup-dev-db.ps1",
+    "db:migrate": "npm run db:migrate -w @memories/api",
+    "db:prepare": "npm run db:dev:setup && npm run db:migrate",
     "build": "npm run build --workspaces",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",

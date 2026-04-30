@@ -21,6 +21,7 @@ Monorepo for the **Memories** service: capture and preserve memories with **phot
 ```bash
 cd C:\Users\Ken Levy\OneDrive\Documents\Business\Ohana\Memories
 npm install
+npm run db:prepare
 ```
 
 Copy `.env.example` to `.env` and adjust. In one terminal start the API, in another the web app:
@@ -36,12 +37,17 @@ npm run dev:web
 
 `apps/web` reads `VITE_API_URL` (see `.env.example`) for display and future fetches to the API.
 
+`npm run db:prepare` is the standard local DB setup path on Windows: it provisions a local PostgreSQL dev cluster if needed, writes `DATABASE_URL` values to `.env`, and runs Drizzle migrations.
+
 ## Scripts (root)
 
 | Script | Description |
 | --- | --- |
 | `npm run dev:web` | Vite dev server for `apps/web` |
 | `npm run dev:api` | API with hot reload (`tsx watch`) |
+| `npm run db:dev:setup` | Provision/start local PostgreSQL dev cluster and write DB URLs to `.env` (Windows) |
+| `npm run db:migrate` | Apply Drizzle migrations for `@memories/api` |
+| `npm run db:prepare` | Run local DB setup then migrations (Windows standard flow) |
 | `npm run build` | Build all workspaces that define `build` |
 | `npm run lint` | ESLint in workspaces that define `lint` |
 | `npm run typecheck` | Typecheck all workspaces |

@@ -384,9 +384,19 @@ describe("api auth shell", () => {
   it("returns ok for /health without auth", async () => {
     const res = await app.inject({ method: "GET", url: "/health" });
     expect(res.statusCode).toBe(200);
+    expect(res.headers["cache-control"]).toBe("no-store");
+    expect(res.headers["x-health-probe"]).toBe("legacy-api");
     const body = JSON.parse(res.body) as { status: string; service: string };
     expect(body.status).toBe("ok");
     expect(body.service).toBe("legacy-api");
+  });
+
+  it("supports HEAD /health for load balancer probes", async () => {
+    const res = await app.inject({ method: "HEAD", url: "/health" });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toBe("");
+    expect(res.headers["cache-control"]).toBe("no-store");
+    expect(res.headers["x-health-probe"]).toBe("legacy-api");
   });
 
   it("returns 401 for unsigned /api/v1 requests", async () => {

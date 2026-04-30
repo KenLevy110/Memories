@@ -36,6 +36,28 @@ Each entry should include:
 
 ## Entries
 
+### 2026-04-30 - Observability baseline (`T13`) metric hooks + probe headers
+
+- **Area:** API, Docs
+- **Summary:** Added metadata-only structured observability hooks in `@memories/api` via `onResponse` logging events (`event=api_metric_hook`) keyed by route templates and status families. Disabled Fastify default request logging to avoid unstructured/raw request payload logging. Added probe-friendly `/health` headers (`cache-control: no-store`, `x-health-probe: legacy-api`) and preserved unauthenticated health behavior.
+- **Metric names (aligned to TDD §3.3 alert themes):**
+  - `memories_api_health_requests_total`
+  - `memories_api_health_latency_ms`
+  - `memories_api_memories_list_requests_total`
+  - `memories_api_memories_list_latency_ms`
+  - `memories_api_upload_sign_image_requests_total`
+  - `memories_api_upload_sign_image_latency_ms`
+  - `memories_api_upload_sign_audio_requests_total`
+  - `memories_api_upload_sign_audio_latency_ms`
+  - `memories_api_memory_finalize_requests_total`
+  - `memories_api_memory_finalize_latency_ms`
+  - `memories_api_media_sign_read_requests_total`
+  - `memories_api_media_sign_read_latency_ms`
+  - Reserved for prompt path once endpoint is enabled: `memories_api_suggest_prompt_requests_total`, `memories_api_suggest_prompt_latency_ms`
+- **Touched:** `apps/api/src/app.ts`, `apps/api/src/app.test.ts`, `docs/development-plan-v1.md`, `docs/implementation-log.md`
+- **Validation:** `npm run lint`, `npm run typecheck`, `npm run test`
+- **Follow-ups:** Wire these metric names into dashboard queries/alerts and fill §5.1 Decision owner/query links as observability backends are finalized.
+
 ### 2026-04-30 - Legacy product branding (symbol, UI copy, health id)
 
 - **Area:** Web, Shared, API, Docs

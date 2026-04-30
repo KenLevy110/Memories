@@ -59,6 +59,68 @@ const ALLOWED_AUDIO_MIME_TYPES = new Set([
   "audio/wav",
   "audio/mpeg",
 ]);
+const METRIC_HOOK_EVENT = "api_metric_hook";
+const METRIC_ROUTE_DEFINITIONS = new Map<
+  string,
+  { counterMetricName: string; latencyMetricName: string }
+>([
+  [
+    `GET ${HEALTH_PATH}`,
+    {
+      counterMetricName: "memories_api_health_requests_total",
+      latencyMetricName: "memories_api_health_latency_ms",
+    },
+  ],
+  [
+    `HEAD ${HEALTH_PATH}`,
+    {
+      counterMetricName: "memories_api_health_requests_total",
+      latencyMetricName: "memories_api_health_latency_ms",
+    },
+  ],
+  [
+    `GET ${API_PREFIX}/clients/:clientId/memories`,
+    {
+      counterMetricName: "memories_api_memories_list_requests_total",
+      latencyMetricName: "memories_api_memories_list_latency_ms",
+    },
+  ],
+  [
+    `POST ${API_PREFIX}/uploads/images/sign`,
+    {
+      counterMetricName: "memories_api_upload_sign_image_requests_total",
+      latencyMetricName: "memories_api_upload_sign_image_latency_ms",
+    },
+  ],
+  [
+    `POST ${API_PREFIX}/uploads/audio/sign`,
+    {
+      counterMetricName: "memories_api_upload_sign_audio_requests_total",
+      latencyMetricName: "memories_api_upload_sign_audio_latency_ms",
+    },
+  ],
+  [
+    `POST ${API_PREFIX}/clients/:clientId/memories`,
+    {
+      counterMetricName: "memories_api_memory_finalize_requests_total",
+      latencyMetricName: "memories_api_memory_finalize_latency_ms",
+    },
+  ],
+  [
+    `POST ${API_PREFIX}/clients/:clientId/memories/suggest_prompt`,
+    {
+      counterMetricName: "memories_api_suggest_prompt_requests_total",
+      latencyMetricName: "memories_api_suggest_prompt_latency_ms",
+    },
+  ],
+  [
+    `POST ${API_PREFIX}/memory-media/:mediaId/sign-read`,
+    {
+      counterMetricName: "memories_api_media_sign_read_requests_total",
+      latencyMetricName: "memories_api_media_sign_read_latency_ms",
+    },
+  ],
+]);
 
 type JwtAuthConfig = {
   issuer: string;
@@ -211,6 +273,7 @@ declare module "fastify" {
   interface FastifyRequest {
     auth: JWTPayload | null;
     request_id: string;
+    started_at_ms: number;
   }
 }
 
@@ -489,6 +552,38 @@ function parseBearerToken(authorizationHeader?: string): string | null {
 
 function normalizePath(url: string): string {
   return url.split("?", 1)[0] ?? url;
+}
+
+function resolveRoutePattern(request: { url: string; routeOptions?: unknown }): string {
+  const routeUrl = (
+    request.routeOptions as
+      | {
+          url?: unknown;
+        }
+      | undefined
+  )?.url;
+  if (typeof routeUrl === "string" && routeUrl.length > 0) {
+    return routeUrl;
+  }
+  return normalizePath(request.url);
+}
+
+function resolveMetricDefinition(method: string, routePattern: string): {
+  counterMetricName: string;
+  latencyMetricName: string;
+} | null {
+  return METRIC_ROUTE_DEFINITIONS.get(`${method.toUpperCase()} ${routePattern}`) ?? null;
+}
+
+function toStatusFamily(statusCode: number): string {
+  return `${Math.floor(statusCode / 100)}xx`;
+}
+
+function describeErrorName(error: unknown): string {
+  if (error instanceof Error && error.name.trim().length > 0) {
+    return error.name;
+  }
+  return "UnknownError";
 }
 
 function resolveImageUploadMaxBytes(options?: BuildAppOptions): number {
@@ -1617,6 +1712,7 @@ export function buildApp(options?: BuildAppOptions) {
     logger: {
       level: logLevel,
     },
+    disableRequestLogging: true,
     requestIdHeader: "x-request-id",
     genReqId: (req) => {
       const incomingHeader = req.headers["x-request-id"];
@@ -1629,6 +1725,7 @@ export function buildApp(options?: BuildAppOptions) {
 
   app.decorateRequest("auth", null);
   app.decorateRequest("request_id", "");
+  app.decorateRequest("started_at_ms", 0);
 
   if (defaultMediaLookup?.close) {
     app.addHook("onClose", async () => {
@@ -1643,6 +1740,7 @@ export function buildApp(options?: BuildAppOptions) {
 
   app.addHook("onRequest", async (request, reply) => {
     request.request_id = request.id;
+    request.started_at_ms = Date.now();
     reply.header("x-request-id", request.id);
 
     const path = normalizePath(request.url);
@@ -1671,6 +1769,29 @@ export function buildApp(options?: BuildAppOptions) {
     enforceClientScopeAuthorization(request);
   });
 
+  app.addHook("onResponse", async (request, reply) => {
+    const routePattern = resolveRoutePattern(request);
+    const metricDefinition = resolveMetricDefinition(request.method, routePattern);
+    if (!metricDefinition) {
+      return;
+    }
+
+    request.log.info(
+      {
+        event: METRIC_HOOK_EVENT,
+        request_id: request.id,
+        method: request.method,
+        route: routePattern,
+        status_code: reply.statusCode,
+        status_family: toStatusFamily(reply.statusCode),
+        latency_ms: Math.max(0, Date.now() - request.started_at_ms),
+        metric_name: metricDefinition.counterMetricName,
+        latency_metric_name: metricDefinition.latencyMetricName,
+      },
+      "API metric hook emitted.",
+    );
+  });
+
   app.setNotFoundHandler((request, reply) => {
     const body = apiErrorSchema.parse({
       code: "NOT_FOUND",
@@ -1689,9 +1810,27 @@ export function buildApp(options?: BuildAppOptions) {
       statusCode >= 500 ? "Unexpected server error." : unsafeMessage || "Request failed.";
 
     if (statusCode >= 500) {
-      request.log.error({ err: error, request_id: request.id, status_code: statusCode });
+      request.log.error(
+        {
+          event: "request_error",
+          request_id: request.id,
+          status_code: statusCode,
+          status_family: toStatusFamily(statusCode),
+          code,
+          route: resolveRoutePattern(request),
+          error_name: describeErrorName(error),
+        },
+        "Request failed with server error.",
+      );
     } else {
-      request.log.warn({ code, request_id: request.id, status_code: statusCode });
+      request.log.warn({
+        event: "request_error",
+        request_id: request.id,
+        status_code: statusCode,
+        status_family: toStatusFamily(statusCode),
+        code,
+        route: resolveRoutePattern(request),
+      });
     }
 
     const body = apiErrorSchema.parse({
@@ -1703,7 +1842,9 @@ export function buildApp(options?: BuildAppOptions) {
     reply.status(statusCode).send(body);
   });
 
-  app.get(HEALTH_PATH, async () => {
+  app.get(HEALTH_PATH, async (request, reply) => {
+    reply.header("cache-control", "no-store");
+    reply.header("x-health-probe", "legacy-api");
     const body = { status: "ok" as const, service: "legacy-api" };
     return healthResponseSchema.parse(body);
   });
@@ -1743,7 +1884,13 @@ export function buildApp(options?: BuildAppOptions) {
       };
     } catch (error) {
       request.log.error(
-        { err: error, request_id: request.id },
+        {
+          event: "dependency_failure",
+          request_id: request.id,
+          route: `${API_PREFIX}/uploads/images/sign`,
+          dependency: "upload_signer",
+          error_name: describeErrorName(error),
+        },
         "Image upload signer unavailable.",
       );
       throw new HttpError(503, "SIGNER_UNAVAILABLE", "Unable to issue upload URL.");
@@ -1777,7 +1924,13 @@ export function buildApp(options?: BuildAppOptions) {
       };
     } catch (error) {
       request.log.error(
-        { err: error, request_id: request.id },
+        {
+          event: "dependency_failure",
+          request_id: request.id,
+          route: `${API_PREFIX}/uploads/audio/sign`,
+          dependency: "upload_signer",
+          error_name: describeErrorName(error),
+        },
         "Audio upload signer unavailable.",
       );
       throw new HttpError(503, "SIGNER_UNAVAILABLE", "Unable to issue upload URL.");
@@ -1945,7 +2098,13 @@ export function buildApp(options?: BuildAppOptions) {
       mediaRecord = mediaLookup ? await mediaLookup(mediaId) : null;
     } catch (error) {
       request.log.error(
-        { err: error, request_id: request.id },
+        {
+          event: "dependency_failure",
+          request_id: request.id,
+          route: `${API_PREFIX}/memory-media/:mediaId/sign-read`,
+          dependency: "media_lookup",
+          error_name: describeErrorName(error),
+        },
         "Playback media lookup unavailable.",
       );
       throw new HttpError(503, "LOOKUP_UNAVAILABLE", "Unable to resolve playback media.");
@@ -1977,7 +2136,13 @@ export function buildApp(options?: BuildAppOptions) {
       };
     } catch (error) {
       request.log.error(
-        { err: error, request_id: request.id },
+        {
+          event: "dependency_failure",
+          request_id: request.id,
+          route: `${API_PREFIX}/memory-media/:mediaId/sign-read`,
+          dependency: "playback_signer",
+          error_name: describeErrorName(error),
+        },
         "Playback signer unavailable.",
       );
       throw new HttpError(503, "SIGNER_UNAVAILABLE", "Unable to issue read URL.");

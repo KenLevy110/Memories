@@ -57,6 +57,7 @@ describe("api auth shell", () => {
   let closeJwksServer = async () => {};
   let privateKey: Awaited<ReturnType<typeof generateKeyPair>>["privateKey"];
   const signedImageUploadUrl = "https://signed-upload.memories.test/put";
+  const signedAudioUploadUrl = "https://signed-upload.memories.test/audio-put";
 
   beforeAll(async () => {
     const keyPair = await generateKeyPair("RS256");
@@ -76,15 +77,21 @@ describe("api auth shell", () => {
         jwksUri: jwksServer.jwksUri,
       },
       imageUploadMaxBytes: 2_000_000,
-      uploadSigner: async ({ practiceId, mediaId, mimeType, byteSize }) => ({
-        uploadUrl: signedImageUploadUrl,
-        storageKey: `${practiceId}/uploads/images/${mediaId}`,
-        expiresAt: "2026-05-01T00:00:00.000Z",
-        requiredHeaders: {
-          "content-type": mimeType,
-          "content-length": String(byteSize),
-        },
-      }),
+      audioUploadMaxBytes: 6_000_000,
+      uploadSigner: async ({ practiceId, mediaId, mediaType, mimeType, byteSize }) => {
+        const isImage = mediaType === "image";
+        const mediaPathSegment = isImage ? "images" : "audio";
+
+        return {
+          uploadUrl: isImage ? signedImageUploadUrl : signedAudioUploadUrl,
+          storageKey: `${practiceId}/uploads/${mediaPathSegment}/${mediaId}`,
+          expiresAt: "2026-05-01T00:00:00.000Z",
+          requiredHeaders: {
+            "content-type": mimeType,
+            "content-length": String(byteSize),
+          },
+        };
+      },
     });
 
     app.get("/api/v1/test/clients/:clientId/memories", async (request) => {
@@ -374,6 +381,103 @@ describe("api auth shell", () => {
       payload: {
         mime_type: "image/webp",
         byte_size: 200_000,
+      },
+    });
+
+    expect(res.statusCode).toBe(403);
+    const body = JSON.parse(res.body) as { code: string };
+    expect(body.code).toBe("FORBIDDEN");
+  });
+
+  it("returns signed audio upload URL for allowed mime and size", async () => {
+    const token = await createToken({
+      user_id: "26be31ac-1673-4e3d-a66d-e0b2f0fef9a9",
+      practice_id: "2f88ca9f-3567-48a8-a0d7-f0d2f6c0db5f",
+      roles: ["GUIDE"],
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/uploads/audio/sign",
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        mime_type: "audio/webm;codecs=opus",
+        byte_size: 5_500_000,
+      },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body) as {
+      media_id: string;
+      storage_key: string;
+      upload_url: string;
+      upload_method: string;
+      required_headers: Record<string, string>;
+    };
+    expect(body.media_id.length).toBeGreaterThan(0);
+    expect(body.storage_key).toContain("2f88ca9f-3567-48a8-a0d7-f0d2f6c0db5f/uploads/audio/");
+    expect(body.upload_url).toBe(signedAudioUploadUrl);
+    expect(body.upload_method).toBe("PUT");
+    expect(body.required_headers["content-type"]).toBe("audio/webm");
+  });
+
+  it("returns 400 for disallowed audio mime type", async () => {
+    const token = await createToken({
+      user_id: "42d41548-6775-4f24-8e87-fb53b380eeb5",
+      practice_id: "55ee0254-b26d-4ca5-b0db-0eb4bb8e2bd8",
+      roles: ["GUIDE"],
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/uploads/audio/sign",
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        mime_type: "video/mp4",
+        byte_size: 100_000,
+      },
+    });
+
+    expect(res.statusCode).toBe(400);
+    const body = JSON.parse(res.body) as { code: string };
+    expect(body.code).toBe("UNSUPPORTED_MEDIA_TYPE");
+  });
+
+  it("returns 400 when audio size exceeds configured limit", async () => {
+    const token = await createToken({
+      user_id: "6d0c6595-c93f-46c3-9f17-2063617dc108",
+      practice_id: "4de3c6e6-0998-4c26-990e-0f034f7ca3de",
+      roles: ["GUIDE"],
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/uploads/audio/sign",
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        mime_type: "audio/mp4",
+        byte_size: 6_000_001,
+      },
+    });
+
+    expect(res.statusCode).toBe(400);
+    const body = JSON.parse(res.body) as { code: string };
+    expect(body.code).toBe("AUDIO_TOO_LARGE");
+  });
+
+  it("returns 403 for audio signing when practice scope is missing", async () => {
+    const token = await createToken({
+      user_id: "445c2f59-2f13-4fbc-9c13-d9128f5be6ff",
+      roles: ["GUIDE"],
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/uploads/audio/sign",
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        mime_type: "audio/mp4",
+        byte_size: 500_000,
       },
     });
 

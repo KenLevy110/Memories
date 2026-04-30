@@ -380,6 +380,8 @@ Implement `POST /api/v1/uploads/audio/sign` per TDD §3.2.
 
 **Verify:** Same as T5 pattern.
 
+DONE 2026-04-30
+
 ---
 
 #### Prompt T7 — Playback sign-read endpoint

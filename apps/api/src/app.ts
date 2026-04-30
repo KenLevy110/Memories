@@ -18,6 +18,7 @@ const API_PREFIX = "/api/v1";
 const HEALTH_PATH = "/health";
 const CLIENT_SELF_ROLE = "CLIENT_SELF";
 const DEFAULT_IMAGE_UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
+const DEFAULT_AUDIO_UPLOAD_MAX_BYTES = 30 * 1024 * 1024;
 const DEFAULT_UPLOAD_URL_TTL_SECONDS = 5 * 60;
 const DEFAULT_UPLOAD_SIGN_ORIGIN = "https://uploads.memories.local";
 const ALLOWED_IMAGE_MIME_TYPES = new Set([
@@ -26,6 +27,14 @@ const ALLOWED_IMAGE_MIME_TYPES = new Set([
   "image/webp",
   "image/heic",
   "image/heif",
+]);
+const ALLOWED_AUDIO_MIME_TYPES = new Set([
+  "audio/webm",
+  "audio/mp4",
+  "audio/x-m4a",
+  "audio/aac",
+  "audio/wav",
+  "audio/mpeg",
 ]);
 
 type JwtAuthConfig = {
@@ -37,6 +46,7 @@ type JwtAuthConfig = {
 type BuildAppOptions = {
   jwtAuth?: JwtAuthConfig;
   imageUploadMaxBytes?: number;
+  audioUploadMaxBytes?: number;
   uploadSigner?: UploadSigner;
 };
 
@@ -44,6 +54,7 @@ type JwtVerifier = (token: string) => Promise<JWTPayload>;
 type UploadSigner = (input: {
   practiceId: string;
   mediaId: string;
+  mediaType: "image" | "audio";
   mimeType: string;
   byteSize: number;
 }) => Promise<{
@@ -276,6 +287,30 @@ function resolveImageUploadMaxBytes(options?: BuildAppOptions): number {
   return fromEnv;
 }
 
+function resolveAudioUploadMaxBytes(options?: BuildAppOptions): number {
+  const fromOption = options?.audioUploadMaxBytes;
+  if (
+    typeof fromOption === "number" &&
+    Number.isFinite(fromOption) &&
+    Number.isInteger(fromOption) &&
+    fromOption > 0
+  ) {
+    return fromOption;
+  }
+
+  const fromEnvRaw = process.env["AUDIO_UPLOAD_MAX_BYTES"];
+  if (!fromEnvRaw) {
+    return DEFAULT_AUDIO_UPLOAD_MAX_BYTES;
+  }
+
+  const fromEnv = Number(fromEnvRaw);
+  if (!Number.isFinite(fromEnv) || !Number.isInteger(fromEnv) || fromEnv <= 0) {
+    return DEFAULT_AUDIO_UPLOAD_MAX_BYTES;
+  }
+
+  return fromEnv;
+}
+
 function resolveUploadSignOrigin(): string {
   const fromEnv = process.env["UPLOAD_SIGN_ORIGIN"];
   if (fromEnv && fromEnv.trim().length > 0) {
@@ -287,11 +322,12 @@ function resolveUploadSignOrigin(): string {
 function createDefaultUploadSigner(): UploadSigner {
   const origin = resolveUploadSignOrigin();
 
-  return async ({ practiceId, mediaId, mimeType, byteSize }) => {
+  return async ({ practiceId, mediaId, mediaType, mimeType, byteSize }) => {
     const expiresAt = new Date(
       Date.now() + DEFAULT_UPLOAD_URL_TTL_SECONDS * 1000,
     ).toISOString();
-    const storageKey = `${practiceId}/uploads/images/${mediaId}`;
+    const mediaPathSegment = mediaType === "image" ? "images" : "audio";
+    const storageKey = `${practiceId}/uploads/${mediaPathSegment}/${mediaId}`;
     const url = new URL(
       storageKey,
       origin.endsWith("/") ? origin : `${origin}/`,
@@ -312,6 +348,11 @@ function createDefaultUploadSigner(): UploadSigner {
   };
 }
 
+function normalizeMimeType(rawMimeType: string): string {
+  const [baseMimeType] = rawMimeType.split(";", 1);
+  return (baseMimeType ?? "").trim().toLowerCase();
+}
+
 function parseImageUploadSignBody(
   body: unknown,
   maxImageUploadBytes: number,
@@ -327,7 +368,7 @@ function parseImageUploadSignBody(
   if (typeof mimeTypeRaw !== "string" || mimeTypeRaw.trim().length === 0) {
     throw new HttpError(400, "VALIDATION_ERROR", "mime_type is required.");
   }
-  const mimeType = mimeTypeRaw.trim().toLowerCase();
+  const mimeType = normalizeMimeType(mimeTypeRaw);
   if (!ALLOWED_IMAGE_MIME_TYPES.has(mimeType)) {
     throw new HttpError(
       400,
@@ -350,6 +391,50 @@ function parseImageUploadSignBody(
       400,
       "IMAGE_TOO_LARGE",
       `byte_size exceeds ${maxImageUploadBytes}.`,
+    );
+  }
+
+  return { mimeType, byteSize };
+}
+
+function parseAudioUploadSignBody(
+  body: unknown,
+  maxAudioUploadBytes: number,
+): { mimeType: string; byteSize: number } {
+  if (!body || typeof body !== "object") {
+    throw new HttpError(400, "VALIDATION_ERROR", "Request body must be an object.");
+  }
+
+  const payload = body as Record<string, unknown>;
+  const mimeTypeRaw = payload["mime_type"];
+  const byteSizeRaw = payload["byte_size"];
+
+  if (typeof mimeTypeRaw !== "string" || mimeTypeRaw.trim().length === 0) {
+    throw new HttpError(400, "VALIDATION_ERROR", "mime_type is required.");
+  }
+  const mimeType = normalizeMimeType(mimeTypeRaw);
+  if (!ALLOWED_AUDIO_MIME_TYPES.has(mimeType)) {
+    throw new HttpError(
+      400,
+      "UNSUPPORTED_MEDIA_TYPE",
+      "Unsupported audio mime_type.",
+    );
+  }
+
+  if (
+    typeof byteSizeRaw !== "number" ||
+    !Number.isFinite(byteSizeRaw) ||
+    !Number.isInteger(byteSizeRaw) ||
+    byteSizeRaw <= 0
+  ) {
+    throw new HttpError(400, "VALIDATION_ERROR", "byte_size must be a positive integer.");
+  }
+  const byteSize = byteSizeRaw;
+  if (byteSize > maxAudioUploadBytes) {
+    throw new HttpError(
+      400,
+      "AUDIO_TOO_LARGE",
+      `byte_size exceeds ${maxAudioUploadBytes}.`,
     );
   }
 
@@ -456,6 +541,7 @@ function toStatusCode(error: unknown): number {
 export function buildApp(options?: BuildAppOptions) {
   const jwtVerifier = createJwtVerifier(resolveJwtAuthConfig(options));
   const imageUploadMaxBytes = resolveImageUploadMaxBytes(options);
+  const audioUploadMaxBytes = resolveAudioUploadMaxBytes(options);
   const uploadSigner = options?.uploadSigner ?? createDefaultUploadSigner();
 
   const app = Fastify({
@@ -562,6 +648,7 @@ export function buildApp(options?: BuildAppOptions) {
       const signed = await uploadSigner({
         practiceId,
         mediaId,
+        mediaType: "image",
         mimeType,
         byteSize,
       });
@@ -578,6 +665,40 @@ export function buildApp(options?: BuildAppOptions) {
       request.log.error(
         { err: error, request_id: request.id },
         "Image upload signer unavailable.",
+      );
+      throw new HttpError(503, "SIGNER_UNAVAILABLE", "Unable to issue upload URL.");
+    }
+  });
+
+  app.post(`${API_PREFIX}/uploads/audio/sign`, async (request) => {
+    const practiceId = requirePracticeIdForProtectedRoute(request);
+    const { mimeType, byteSize } = parseAudioUploadSignBody(
+      request.body as unknown,
+      audioUploadMaxBytes,
+    );
+    const mediaId = randomUUID();
+
+    try {
+      const signed = await uploadSigner({
+        practiceId,
+        mediaId,
+        mediaType: "audio",
+        mimeType,
+        byteSize,
+      });
+
+      return {
+        media_id: mediaId,
+        storage_key: signed.storageKey,
+        upload_url: signed.uploadUrl,
+        upload_method: "PUT" as const,
+        required_headers: signed.requiredHeaders,
+        expires_at: signed.expiresAt,
+      };
+    } catch (error) {
+      request.log.error(
+        { err: error, request_id: request.id },
+        "Audio upload signer unavailable.",
       );
       throw new HttpError(503, "SIGNER_UNAVAILABLE", "Unable to issue upload URL.");
     }

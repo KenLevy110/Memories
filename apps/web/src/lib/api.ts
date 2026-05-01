@@ -113,8 +113,8 @@ function parseUploadSignResponse(payload: unknown): UploadSignResponse {
     });
   }
   const candidate = payload as Record<string, unknown>;
-  const requiredHeaders = candidate["required_headers"];
-  if (!requiredHeaders || typeof requiredHeaders !== "object") {
+  const requiredHeadersRaw = candidate["required_headers"];
+  if (!requiredHeadersRaw || typeof requiredHeadersRaw !== "object") {
     throw new ApiClientError({
       message: "Upload signer response is missing required headers.",
       statusCode: null,
@@ -123,6 +123,22 @@ function parseUploadSignResponse(payload: unknown): UploadSignResponse {
       retryable: false,
     });
   }
+  const requiredHeaders = Object.entries(requiredHeadersRaw as Record<string, unknown>).reduce(
+    (accumulator, [key, value]) => {
+      if (typeof value !== "string") {
+        throw new ApiClientError({
+          message: "Upload signer response required headers are invalid.",
+          statusCode: null,
+          code: "INVALID_RESPONSE",
+          requestId: null,
+          retryable: false,
+        });
+      }
+      accumulator[key] = value;
+      return accumulator;
+    },
+    {} as Record<string, string>,
+  );
 
   const mediaId = candidate["media_id"];
   const storageKey = candidate["storage_key"];
@@ -150,7 +166,7 @@ function parseUploadSignResponse(payload: unknown): UploadSignResponse {
     storage_key: storageKey,
     upload_url: uploadUrl,
     upload_method: "PUT",
-    required_headers: requiredHeaders as Record<string, string>,
+    required_headers: requiredHeaders,
     expires_at: expiresAt,
   };
 }
@@ -309,6 +325,44 @@ export async function signAudioUpload(file: Blob): Promise<UploadSignResponse> {
     }),
   });
   return parseUploadSignResponse(payload);
+}
+
+export async function uploadSignedMedia(file: Blob, signedUpload: UploadSignResponse): Promise<void> {
+  const headers = new Headers();
+  for (const [name, value] of Object.entries(signedUpload.required_headers)) {
+    headers.set(name, value);
+  }
+  if (!headers.has("content-type") && file.type) {
+    headers.set("content-type", file.type);
+  }
+
+  try {
+    const response = await fetch(signedUpload.upload_url, {
+      method: signedUpload.upload_method,
+      headers,
+      body: file,
+    });
+    if (!response.ok) {
+      throw new ApiClientError({
+        message: `Upload failed (${response.status})`,
+        statusCode: response.status,
+        code: "UPLOAD_FAILED",
+        requestId: null,
+        retryable: isRetryableStatus(response.status),
+      });
+    }
+  } catch (error) {
+    if (error instanceof ApiClientError) {
+      throw error;
+    }
+    throw new ApiClientError({
+      message: "Upload request failed.",
+      statusCode: null,
+      code: "UPLOAD_NETWORK_ERROR",
+      requestId: null,
+      retryable: true,
+    });
+  }
 }
 
 export async function signReadPlayback(mediaId: string): Promise<PlaybackSignResponse> {

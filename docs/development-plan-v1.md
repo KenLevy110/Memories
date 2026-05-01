@@ -14,7 +14,7 @@ For template structure and section intent, see [development-plan-template.md](te
 | Field             | Value                                                                                 |
 | ----------------- | ------------------------------------------------------------------------------------- |
 | **Title**         | Memories — development plan                                                           |
-| **Version**       | 1.5                                                                                   |
+| **Version**       | 1.7                                                                                   |
 | **Author**        | Ken Levy                                                                              |
 | **Date**          | 2026-04-30                                                                            |
 | **Status**        | Draft                                                                                 |
@@ -595,16 +595,18 @@ Workspaces use `**@memories/web`** and `**@memories/api`** (see root `package.js
 
 ### 12.4 Epic review and acceptance matrix
 
+**Merge-ready expectation (non-trivial work):** green CI with `npm run lint`, `npm run typecheck`, and `npm run test` (including coverage floors in [AGENTS.md](../AGENTS.md)); `developer-code-quality` checklist complete before review; apply `developer-senior`, `developer-security`, and `developer-quality-assurance` wherever the reviewer column and risk profile require.
 
-| Epic      | Includes tickets | Primary reviewers                                   | Epic done gate                                                                               |
-| --------- | ---------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| **E1–E6** | T1–T14           | Sr/Sec where marked; QA on T14; code-quality always | Stage **0.5** manual matrix passed; CI green                                                 |
-| **E7**    | T15              | Sr, QA                                              | Multi-image UX approved                                                                      |
-| **E8**    | T16              | QA                                                  | Upload + record both work                                                                    |
-| **E9**    | T17,T18          | Sr, QA, Sec (vendor)                                | Transcript states correct                                                                    |
-| **E10**   | T19              | Sr, QA                                              | Video on supported devices documented                                                        |
-| **E11**   | T20,T21          | Sec                                                 | Prompt/tags behind flags                                                                     |
-| **E12**   | T23,T24          | Sr, QA, Sec                                         | **§6.2 Definition of ready** satisfied; Appendix A JWT parity; CI + manual §12.5 “Later” row |
+
+| Epic      | Includes tickets | Primary reviewers                                       | Epic done gate                                                                                                                                       |
+| --------- | ---------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **E1–E6** | T1–T14, T22      | Sr/Sec/QA per §6.2 reviewer column; code-quality always | Stage **0.5** rows in §12.5 are signed off **and** T22 release checklist complete; CI green with coverage floors; authz/audit/no-PHI-log checks pass |
+| **E7**    | T15              | Sr, QA                                                  | Multi-image UX approved                                                                                                                              |
+| **E8**    | T16              | QA                                                      | Upload + record both work                                                                                                                            |
+| **E9**    | T17,T18          | Sr, QA, Sec (vendor)                                    | Transcript states correct                                                                                                                            |
+| **E10**   | T19              | Sr, QA                                                  | Video on supported devices documented                                                                                                                |
+| **E11**   | T20,T21          | Sec                                                     | Prompt/tags behind flags                                                                                                                             |
+| **E12**   | T23,T24          | Sr, QA, Sec                                             | **§6.2 Definition of ready** satisfied; Appendix A JWT parity; CI + manual §12.5 “Later” row                                                         |
 
 
 ### 12.5 Manual test execution matrix
@@ -630,35 +632,6 @@ Workspaces use `**@memories/web`** and `**@memories/api`** (see root `package.js
 | **0.9**   | Video                                     | T19             | Capture short clip                                                                                         | Playback OK on target devices                                  | Manual / date |
 | **Later** | **FR-017** / **FR-018** (when unblocked)  | T23,T24         | Role-appropriate comment add/read; denial for wrong role; set visibility → family sees per policy          | Matches Appendix A + PRD; no PHI in notifications              | Manual / date |
 
-
-#### Manual procedure — matrix **row 3** (image + audio upload sign URLs, **T5** + **T6**)
-
-Matrix row 3 is the third **0.5** scenario row in the table above: **Image + audio upload sign URLs**. Endpoints and validation align with [technical-design-v1.md](technical-design-v1.md) §3.2 (`POST /api/v1/uploads/images/sign`, `POST /api/v1/uploads/audio/sign`).
-
-**Prerequisites checklist**
-
-- **T5** and **T6** are merged in the environment you are testing.
-- API is running (`npm run dev` or `npm run dev:api`) against the target base URL (e.g. `http://localhost:3000`).
-- You have a valid **Bearer** JWT accepted by the API (local: `npm run dev:local-auth`, then mint at `http://127.0.0.1:3010/dev/token` per root `README.md`).
-- The JWT includes a non-empty `**practice_id`** claim (sign routes deny with **403** if it is missing).
-- Optional: note `**IMAGE_UPLOAD_MAX_BYTES`** / `**AUDIO_UPLOAD_MAX_BYTES**` and `**UPLOAD_SIGN_ORIGIN**` in `.env` if you need to match staging limits or a real upload host.
-
-**Step-by-step method**
-
-1. **Capture a Bearer token** — Copy the `Authorization: Bearer …` value (or raw JWT) you will send on every protected call below.
-2. **Image sign — allowed MIME and size** — `POST {API}/api/v1/uploads/images/sign` with JSON body `{"mime_type":"image/jpeg","byte_size":1024}` (or another allowed image MIME and a positive integer within the configured image max). Send header `Authorization: Bearer <token>` and `Content-Type: application/json`.
-3. **Assert image success contract** — Response **200**, JSON includes `media_id`, `storage_key`, `upload_url`, `upload_method` `**PUT`**, `required_headers`, and `expires_at`. Confirm `storage_key` is scoped under your JWT’s practice (implementation pattern: `{practice_id}/uploads/images/{media_id}`). Error bodies must not leak PHI (**NFR-008**).
-4. **Image sign — disallowed MIME** — Repeat with `mime_type` such as `image/gif` or `application/pdf`. Expect **400** and error `code` `**UNSUPPORTED_MEDIA_TYPE`** (or validation messaging consistent with the deployed build).
-5. **Image sign — oversize** — Repeat with an allowed `mime_type` but `byte_size` **greater than** the configured image maximum (default **10_485_760** unless overridden). Expect **400** and error `code` `**IMAGE_TOO_LARGE`**.
-6. **Audio sign — allowed MIME and size** — `POST {API}/api/v1/uploads/audio/sign` with body `{"mime_type":"audio/webm","byte_size":2048}` (or another allowed audio MIME within the audio max). Same auth headers as step 2.
-7. **Assert audio success contract** — Same shape as step 3; `storage_key` should follow `{practice_id}/uploads/audio/{media_id}`.
-8. **Audio sign — disallowed MIME** — e.g. `mime_type` `audio/ogg` or `text/plain`. Expect **400** / `**UNSUPPORTED_MEDIA_TYPE`** for unsupported audio types.
-9. **Audio sign — oversize** — `byte_size` above the configured audio maximum (default **30_000_000** unless overridden). Expect **400** / `**AUDIO_TOO_LARGE`**.
-10. **Optional — prove “URL usable for intended upload”** — When real object storage (or a local stub that accepts **PUT**) is configured: issue a sign response, then **PUT** exactly `**byte_size`** bytes to `upload_url` using every header in `required_headers` (typically `Content-Type` matching the signed MIME). Expect success from the storage layer; a second PUT with wrong length or wrong `Content-Type` should fail if the provider enforces policy. With the **default dev signer** only (no reachable upload host), treat steps 2–9 as sufficient API/policy sign-off and defer this step to an environment where PUT targets exist.
-
-**Sign-off:** When every checked prerequisite holds and steps 2–9 pass (and step 10 where applicable), record your initials and date in the matrix **Sign-off** column for row 3.
-
-**Pre-review code quality (applies across epics):** read `.cursor/skills/developer-code-quality/SKILL.md` before marking review-ready.
 
 ### 12.6 Mobile automation standard
 
@@ -686,5 +659,6 @@ PR merges that touch `**apps/web`** capture, list, or detail layouts should keep
 | 1.3     | **§12.2** heading **T1–T24**; Session defaults ↔ **§12.5** (template alignment); template cross-refs (**§12.2** prompts, **§12.5** code-quality tie) synced with `**development-plan-template`** + `**development-planner`**.                                     |
 | 1.5     | **§12.5** expanded **0.5** manual matrix (incremental API/web/ops rows + execution note); **§8** manual-scenario bullet aligned; **§12.5** intro clarifies sign-off vs stage gate and **Related tickets** = **all** merged before a row is runnable/sign-offable. |
 | 1.6     | **§12.5** manual procedure checklist + steps for matrix row 3 (upload sign URLs, **T5**/**T6**).                                                                                                                                                                  |
+| 1.7     | **§12.4** **E1–E6** gate tightened: include **T22**, align reviewer scope to **§6.2**, and require explicit CI/coverage + security + release-checklist completion criteria.                                                                                       |
 
 

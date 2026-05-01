@@ -18,6 +18,7 @@ import {
   setDevBearerToken,
   signAudioUpload,
   signImageUpload,
+  uploadSignedMedia,
   type FinalizeMemoryRequest,
 } from "../lib/api";
 import { addFinalizeJob, flushFinalizeQueue } from "../lib/retryQueue";
@@ -444,6 +445,10 @@ function CapturePage() {
       const [signedImage, signedAudio] = await Promise.all([
         signImageUpload(imageBlob),
         signAudioUpload(audioBlob),
+      ]);
+      await Promise.all([
+        uploadSignedMedia(imageBlob, signedImage),
+        uploadSignedMedia(audioBlob, signedAudio),
       ]);
 
       const finalizeRequest: FinalizeMemoryRequest = {

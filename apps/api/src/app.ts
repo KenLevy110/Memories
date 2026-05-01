@@ -1305,6 +1305,7 @@ function parseOptionalNullableString(
 
 function parseFinalizeMemoryBody(
   body: unknown,
+  practiceId: string,
   maxImageUploadBytes: number,
   maxAudioUploadBytes: number,
 ): {
@@ -1374,7 +1375,8 @@ function parseFinalizeMemoryBody(
       "media.storage_key",
       512,
     );
-    const mimeType = parseNonEmptyString(mediaPayload["mime_type"], "media.mime_type", 128);
+    const mimeTypeRaw = parseNonEmptyString(mediaPayload["mime_type"], "media.mime_type", 128);
+    const mimeType = normalizeMimeType(mimeTypeRaw);
     const byteSize = mediaPayload["byte_size"];
     if (
       typeof byteSize !== "number" ||
@@ -1394,11 +1396,26 @@ function parseFinalizeMemoryBody(
       if (imageCount > 1) {
         throw new HttpError(400, "VALIDATION_ERROR", "At most one image is allowed.");
       }
+      if (!ALLOWED_IMAGE_MIME_TYPES.has(mimeType)) {
+        throw new HttpError(
+          400,
+          "UNSUPPORTED_MEDIA_TYPE",
+          "Unsupported image mime_type.",
+        );
+      }
       if (byteSize > maxImageUploadBytes) {
         throw new HttpError(
           400,
           "IMAGE_TOO_LARGE",
           `media.byte_size exceeds ${maxImageUploadBytes} for image media.`,
+        );
+      }
+      const expectedStorageKey = `${practiceId}/uploads/images/${mediaId}`;
+      if (storageKey !== expectedStorageKey) {
+        throw new HttpError(
+          400,
+          "VALIDATION_ERROR",
+          "media.storage_key does not match expected signed image key.",
         );
       }
     }
@@ -1407,11 +1424,26 @@ function parseFinalizeMemoryBody(
       if (audioCount > 1) {
         throw new HttpError(400, "VALIDATION_ERROR", "At most one audio file is allowed.");
       }
+      if (!ALLOWED_AUDIO_MIME_TYPES.has(mimeType)) {
+        throw new HttpError(
+          400,
+          "UNSUPPORTED_MEDIA_TYPE",
+          "Unsupported audio mime_type.",
+        );
+      }
       if (byteSize > maxAudioUploadBytes) {
         throw new HttpError(
           400,
           "AUDIO_TOO_LARGE",
           `media.byte_size exceeds ${maxAudioUploadBytes} for audio media.`,
+        );
+      }
+      const expectedStorageKey = `${practiceId}/uploads/audio/${mediaId}`;
+      if (storageKey !== expectedStorageKey) {
+        throw new HttpError(
+          400,
+          "VALIDATION_ERROR",
+          "media.storage_key does not match expected signed audio key.",
         );
       }
     }
@@ -1438,7 +1470,7 @@ function parseFinalizeMemoryBody(
       mediaId,
       type,
       storageKey,
-      mimeType: normalizeMimeType(mimeType),
+      mimeType,
       byteSize,
       sortOrder,
     });
@@ -1858,6 +1890,7 @@ export function buildApp(options?: BuildAppOptions) {
   });
 
   app.post(`${API_PREFIX}/uploads/images/sign`, async (request) => {
+    requireGuideMutationRole(request);
     const practiceId = requirePracticeIdForProtectedRoute(request);
     const { mimeType, byteSize } = parseImageUploadSignBody(
       request.body as unknown,
@@ -1898,6 +1931,7 @@ export function buildApp(options?: BuildAppOptions) {
   });
 
   app.post(`${API_PREFIX}/uploads/audio/sign`, async (request) => {
+    requireGuideMutationRole(request);
     const practiceId = requirePracticeIdForProtectedRoute(request);
     const { mimeType, byteSize } = parseAudioUploadSignBody(
       request.body as unknown,
@@ -1948,6 +1982,7 @@ export function buildApp(options?: BuildAppOptions) {
 
     const parsedBody = parseFinalizeMemoryBody(
       request.body as unknown,
+      practiceId,
       imageUploadMaxBytes,
       audioUploadMaxBytes,
     );
@@ -2089,6 +2124,9 @@ export function buildApp(options?: BuildAppOptions) {
     const mediaId = getPathParam(request.params, "mediaId");
     if (!mediaId) {
       throw new HttpError(400, "VALIDATION_ERROR", "mediaId path parameter is required.");
+    }
+    if (!isUuid(mediaId)) {
+      throw new HttpError(400, "VALIDATION_ERROR", "mediaId path parameter must be a UUID.");
     }
 
     const practiceId = requirePracticeIdForProtectedRoute(request);

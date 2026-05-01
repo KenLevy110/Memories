@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { finalizeMemory } from "./api";
+import { finalizeMemory, uploadSignedMedia } from "./api";
 
 function buildMemoryDetailResponse() {
   return {
@@ -55,5 +55,29 @@ describe("api client", () => {
     const headers = new Headers(init?.headers);
     expect(headers.get("idempotency-key")).toBe("idem-123");
     expect(headers.get("authorization")).toBe("Bearer token-for-tests");
+  });
+
+  it("uploads media bytes with signed PUT contract headers", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(null, { status: 200 }));
+
+    await uploadSignedMedia(new File(["abc"], "photo.jpg", { type: "image/jpeg" }), {
+      media_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      storage_key: "practice/uploads/images/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      upload_url: "https://uploads.example.com/image",
+      upload_method: "PUT",
+      required_headers: {
+        "content-type": "image/jpeg",
+      },
+      expires_at: "2026-04-30T00:05:00.000Z",
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("https://uploads.example.com/image");
+    const init = fetchMock.mock.calls[0]?.[1];
+    expect(init?.method).toBe("PUT");
+    const headers = new Headers(init?.headers);
+    expect(headers.get("content-type")).toBe("image/jpeg");
   });
 });

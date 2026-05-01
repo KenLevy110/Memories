@@ -20,5 +20,5 @@ await app.listen({ port, host });
 if (isQuiet) {
   console.log(`Legacy API http://127.0.0.1:${port}`);
 } else {
-    app.log.info(`Legacy API listening on ${host}:${port}`);
+  app.log.info(`Legacy API listening on ${host}:${port}`);
 }

@@ -55,11 +55,13 @@ describe("capture flow smoke", () => {
     window.localStorage.setItem("memories.devBearerToken", "token-for-capture-test");
     window.history.pushState({}, "", "/clients/00000000-0000-4000-8000-000000000001/capture?step=photo");
 
-    const fetchCalls: Array<{ url: string; headers: Headers }> = [];
+    const fetchCalls: Array<{ url: string; method: string; headers: Headers }> = [];
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = String(input);
+      const method = init?.method ?? "GET";
       fetchCalls.push({
         url,
+        method,
         headers: new Headers(init?.headers),
       });
 
@@ -93,6 +95,14 @@ describe("capture flow smoke", () => {
           }),
           { status: 200, headers: { "content-type": "application/json" } },
         );
+      }
+
+      if (url === "https://uploads.example.com/image") {
+        return new Response(null, { status: 200 });
+      }
+
+      if (url === "https://uploads.example.com/audio") {
+        return new Response(null, { status: 200 });
       }
 
       if (url.includes("/api/v1/clients/00000000-0000-4000-8000-000000000001/memories")) {
@@ -142,7 +152,19 @@ describe("capture flow smoke", () => {
       const finalizeCall = fetchCalls.find((call) =>
         call.url.includes("/api/v1/clients/00000000-0000-4000-8000-000000000001/memories"),
       );
+      const imageUploadCall = fetchCalls.find(
+        (call) => call.url === "https://uploads.example.com/image",
+      );
+      const audioUploadCall = fetchCalls.find(
+        (call) => call.url === "https://uploads.example.com/audio",
+      );
       expect(finalizeCall).toBeDefined();
+      expect(imageUploadCall).toBeDefined();
+      expect(imageUploadCall?.method).toBe("PUT");
+      expect(imageUploadCall?.headers.get("content-type")).toBe("image/jpeg");
+      expect(audioUploadCall).toBeDefined();
+      expect(audioUploadCall?.method).toBe("PUT");
+      expect(audioUploadCall?.headers.get("content-type")).toBe("audio/webm");
       expect(finalizeCall?.headers.get("idempotency-key")).toBeTruthy();
       expect(finalizeCall?.headers.get("authorization")).toBe("Bearer token-for-capture-test");
     });

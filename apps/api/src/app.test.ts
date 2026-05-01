@@ -655,6 +655,29 @@ describe("api auth shell", () => {
     expect(body.code).toBe("FORBIDDEN");
   });
 
+  it("returns 403 for image signing when role is not allowed to mutate", async () => {
+    const token = await createToken({
+      user_id: "fcc4f596-68e8-4449-bab9-2dfdc1f2f763",
+      practice_id: "9de5830f-61f9-402e-9e33-b37e45d7d762",
+      client_id: "e7bf4cd7-c1ae-40f9-b3a2-c9f57f6c49fa",
+      roles: ["CLIENT_SELF"],
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/uploads/images/sign",
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        mime_type: "image/jpeg",
+        byte_size: 100_000,
+      },
+    });
+
+    expect(res.statusCode).toBe(403);
+    const body = JSON.parse(res.body) as { code: string };
+    expect(body.code).toBe("FORBIDDEN");
+  });
+
   it("returns signed audio upload URL for allowed mime and size", async () => {
     const token = await createToken({
       user_id: "26be31ac-1673-4e3d-a66d-e0b2f0fef9a9",
@@ -781,6 +804,25 @@ describe("api auth shell", () => {
     expect(body.mime_type).toBe("audio/webm");
   });
 
+  it("returns 400 for playback sign-read with invalid mediaId format", async () => {
+    const token = await createToken({
+      user_id: "99104e83-ee4a-4ea3-b2da-85f48a4bb844",
+      practice_id: playbackPracticeId,
+      client_id: playbackClientId,
+      roles: ["GUIDE"],
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/memory-media/not-a-uuid/sign-read",
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(res.statusCode).toBe(400);
+    const body = JSON.parse(res.body) as { code: string };
+    expect(body.code).toBe("VALIDATION_ERROR");
+  });
+
   it("returns 403 when playback media is outside caller client scope", async () => {
     const token = await createToken({
       user_id: "db83fd9f-736e-4677-a6f9-e8cdacdcc1af",
@@ -806,9 +848,12 @@ describe("api auth shell", () => {
 
   it("replays finalize create by idempotency key with the same memory id", async () => {
     const clientId = "154f0bd6-bcdf-43b7-9f8f-fc2de7b59fe4";
+    const practiceId = "f4cc930e-f9db-4a35-b4d2-e4f9f6f05704";
+    const imageMediaId = randomUUID();
+    const audioMediaId = randomUUID();
     const token = await createToken({
       user_id: "a3f1a2a8-cf05-4794-a521-fb8bd7f06745",
-      practice_id: "f4cc930e-f9db-4a35-b4d2-e4f9f6f05704",
+      practice_id: practiceId,
       client_id: clientId,
       roles: ["GUIDE"],
     });
@@ -819,17 +864,17 @@ describe("api auth shell", () => {
       body: "A short memory",
       media: [
         {
-          media_id: randomUUID(),
+          media_id: imageMediaId,
           type: "image",
-          storage_key: "f4cc/uploads/images/1",
+          storage_key: `${practiceId}/uploads/images/${imageMediaId}`,
           mime_type: "image/jpeg",
           byte_size: 120_000,
           sort_order: 0,
         },
         {
-          media_id: randomUUID(),
+          media_id: audioMediaId,
           type: "audio",
-          storage_key: "f4cc/uploads/audio/1",
+          storage_key: `${practiceId}/uploads/audio/${audioMediaId}`,
           mime_type: "audio/webm",
           byte_size: 220_000,
           sort_order: 1,
@@ -865,9 +910,12 @@ describe("api auth shell", () => {
 
   it("returns 400 when finalize includes more than one image", async () => {
     const clientId = "f2e22495-16e5-414f-9b15-9f1f1669a56f";
+    const practiceId = "77190dae-84bf-4a2f-b7f4-65073b26122b";
+    const firstImageId = randomUUID();
+    const secondImageId = randomUUID();
     const token = await createToken({
       user_id: "3c5ea224-0b96-4e94-b29f-768de7be2afb",
-      practice_id: "77190dae-84bf-4a2f-b7f4-65073b26122b",
+      practice_id: practiceId,
       client_id: clientId,
       roles: ["GUIDE"],
     });
@@ -883,16 +931,53 @@ describe("api auth shell", () => {
         title: "Too many photos",
         media: [
           {
-            media_id: randomUUID(),
+            media_id: firstImageId,
             type: "image",
-            storage_key: "uploads/images/a",
+            storage_key: `${practiceId}/uploads/images/${firstImageId}`,
             mime_type: "image/png",
             byte_size: 100_000,
           },
           {
-            media_id: randomUUID(),
+            media_id: secondImageId,
             type: "image",
-            storage_key: "uploads/images/b",
+            storage_key: `${practiceId}/uploads/images/${secondImageId}`,
+            mime_type: "image/png",
+            byte_size: 100_000,
+          },
+        ],
+      },
+    });
+
+    expect(res.statusCode).toBe(400);
+    const body = JSON.parse(res.body) as { code: string };
+    expect(body.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("returns 400 when finalize media storage_key is tampered", async () => {
+    const clientId = "a1d6c9ac-566a-4f95-b8ef-a3d8f0152f44";
+    const practiceId = "f9f4a11f-28f5-4e95-8c15-433464f843fa";
+    const imageMediaId = randomUUID();
+    const token = await createToken({
+      user_id: "35ed6e13-cb42-4331-9d65-638a1ed53ac8",
+      practice_id: practiceId,
+      client_id: clientId,
+      roles: ["GUIDE"],
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/v1/clients/${clientId}/memories`,
+      headers: {
+        authorization: `Bearer ${token}`,
+        "idempotency-key": "idem-t8-storage-tamper",
+      },
+      payload: {
+        title: "Tampered key",
+        media: [
+          {
+            media_id: imageMediaId,
+            type: "image",
+            storage_key: `${practiceId}/uploads/images/not-${imageMediaId}`,
             mime_type: "image/png",
             byte_size: 100_000,
           },
@@ -915,6 +1000,9 @@ describe("api auth shell", () => {
       roles: ["GUIDE"],
     });
 
+    const firstAudioMediaId = randomUUID();
+    const secondAudioMediaId = randomUUID();
+
     const firstCreate = await app.inject({
       method: "POST",
       url: `/api/v1/clients/${clientId}/memories`,
@@ -926,9 +1014,9 @@ describe("api auth shell", () => {
         title: "Old memory",
         media: [
           {
-            media_id: randomUUID(),
+            media_id: firstAudioMediaId,
             type: "audio",
-            storage_key: "uploads/audio/a",
+            storage_key: `${practiceId}/uploads/audio/${firstAudioMediaId}`,
             mime_type: "audio/webm",
             byte_size: 210_000,
           },
@@ -946,9 +1034,9 @@ describe("api auth shell", () => {
         title: "New memory",
         media: [
           {
-            media_id: randomUUID(),
+            media_id: secondAudioMediaId,
             type: "audio",
-            storage_key: "uploads/audio/b",
+            storage_key: `${practiceId}/uploads/audio/${secondAudioMediaId}`,
             mime_type: "audio/webm",
             byte_size: 220_000,
           },
@@ -991,6 +1079,7 @@ describe("api auth shell", () => {
   it("returns 403 for CLIENT_SELF patch attempts on memories", async () => {
     const clientId = "2cffeb73-c94a-45b2-a920-4f318fe214d0";
     const practiceId = "2013e8e7-2897-4cb1-a0ef-d8f958c5ee8f";
+    const audioMediaId = randomUUID();
     const guideToken = await createToken({
       user_id: "f6b6f052-3c9e-4ec9-85c4-53ca0f7d44e4",
       practice_id: practiceId,
@@ -1005,9 +1094,9 @@ describe("api auth shell", () => {
         title: "Protected memory",
         media: [
           {
-            media_id: randomUUID(),
+            media_id: audioMediaId,
             type: "audio",
-            storage_key: "uploads/audio/protected",
+            storage_key: `${practiceId}/uploads/audio/${audioMediaId}`,
             mime_type: "audio/webm",
             byte_size: 200_000,
           },
@@ -1038,6 +1127,7 @@ describe("api auth shell", () => {
   it("patches and soft-deletes memory for guide role", async () => {
     const clientId = "54e33851-c132-4fdf-ad5d-d4860bf215a6";
     const practiceId = "13dc3f50-13f4-4f3e-a026-6af57a1ca14d";
+    const audioMediaId = randomUUID();
     const guideToken = await createToken({
       user_id: "26abfdc6-b8f6-427e-b8f4-9f1f6f7f77ad",
       practice_id: practiceId,
@@ -1053,9 +1143,9 @@ describe("api auth shell", () => {
         title: "Update me",
         media: [
           {
-            media_id: randomUUID(),
+            media_id: audioMediaId,
             type: "audio",
-            storage_key: "uploads/audio/update-me",
+            storage_key: `${practiceId}/uploads/audio/${audioMediaId}`,
             mime_type: "audio/webm",
             byte_size: 200_000,
           },

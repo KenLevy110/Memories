@@ -15,6 +15,7 @@ import {
   clearDevBearerToken,
   finalizeMemory,
   getDevBearerToken,
+  isDevTokenInputEnabled,
   setDevBearerToken,
   signAudioUpload,
   signImageUpload,
@@ -39,6 +40,7 @@ function AppShell() {
   const [tokenInput, setTokenInput] = useState(getDevBearerToken() ?? "");
   const [tokenStatus, setTokenStatus] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const showDevTokenInput = isDevTokenInputEnabled();
 
   useEffect(() => {
     const runQueue = () => {
@@ -78,23 +80,25 @@ function AppShell() {
           <h1>Legacy memories</h1>
           <p>Facilitator flow: list, detail playback, capture, and queued finalize retry.</p>
         </div>
-        <div className="token-controls">
-          <label htmlFor="devToken">Dev bearer token</label>
-          <textarea
-            id="devToken"
-            rows={3}
-            value={tokenInput}
-            onChange={(event) => {
-              setTokenInput(event.target.value);
-              setTokenStatus(null);
-            }}
-            placeholder="Paste token from /dev/token"
-          />
-          <button type="button" onClick={onSaveToken}>
-            Save token
-          </button>
-          {tokenStatus ? <span className="hint">{tokenStatus}</span> : null}
-        </div>
+        {showDevTokenInput ? (
+          <div className="token-controls">
+            <label htmlFor="devToken">Dev bearer token</label>
+            <textarea
+              id="devToken"
+              rows={3}
+              value={tokenInput}
+              onChange={(event) => {
+                setTokenInput(event.target.value);
+                setTokenStatus(null);
+              }}
+              placeholder="Paste token from /dev/token"
+            />
+            <button type="button" onClick={onSaveToken}>
+              Save token
+            </button>
+            {tokenStatus ? <span className="hint">{tokenStatus}</span> : null}
+          </div>
+        ) : null}
       </header>
       <main className="app-main">
         <Outlet />
@@ -254,13 +258,20 @@ function MemoryDetailPage() {
                       Get signed playback URL
                     </button>
                     {playbackByMediaId[mediaItem.media_id] ? (
-                      <audio controls src={playbackByMediaId[mediaItem.media_id]} />
+                      <audio
+                        aria-label={`${mediaItem.type} playback`}
+                        controls
+                        src={playbackByMediaId[mediaItem.media_id]}
+                      />
                     ) : null}
                   </div>
                 ) : null}
               </li>
             ))}
           </ul>
+          {signReadMutation.isError ? (
+            <p role="alert">Failed to sign playback URL: {signReadMutation.error.message}</p>
+          ) : null}
         </div>
       ) : null}
     </section>
@@ -517,7 +528,7 @@ function CapturePage() {
 
       {step === "photo" ? (
         <div className="step-card">
-          <h3>Step 1 of 4 · Photograph</h3>
+          <h3>Step 1 of 5 · Photograph</h3>
           <input
             aria-label="Photo"
             type="file"
@@ -537,7 +548,7 @@ function CapturePage() {
 
       {step === "meta" ? (
         <div className="step-card">
-          <h3>Step 2 of 4 · Name and room</h3>
+          <h3>Step 2 of 5 · Name and room</h3>
           <label htmlFor="titleInput">Object title</label>
           <input
             id="titleInput"
@@ -565,7 +576,7 @@ function CapturePage() {
 
       {step === "prompt" ? (
         <div className="step-card">
-          <h3>Step 3 of 4 · Story prompt</h3>
+          <h3>Step 3 of 5 · Story prompt</h3>
           <p>
             Ask: “What story comes to mind when you look at this object in {room.trim() || "this room"}?”
           </p>
@@ -582,7 +593,7 @@ function CapturePage() {
 
       {step === "record" ? (
         <div className="step-card">
-          <h3>Step 3 of 4 · Recording</h3>
+          <h3>Step 4 of 5 · Recording</h3>
           <p>Use MediaRecorder when available. A file picker fallback is available for unsupported environments.</p>
           <div className="row">
             {isRecording ? (
@@ -608,7 +619,9 @@ function CapturePage() {
             }}
           />
           {recordingError ? <p role="alert">{recordingError}</p> : null}
-          {audioPreviewUrl ? <audio controls src={audioPreviewUrl} /> : null}
+          {audioPreviewUrl ? (
+            <audio aria-label="Audio recording preview" controls src={audioPreviewUrl} />
+          ) : null}
           <div className="row">
             <button type="button" onClick={() => goToStep("prompt")}>
               Back
@@ -622,7 +635,7 @@ function CapturePage() {
 
       {step === "review" ? (
         <div className="step-card">
-          <h3>Step 4 of 4 · Review and save</h3>
+          <h3>Step 5 of 5 · Review and save</h3>
           <p>Title: {title || "(missing)"}</p>
           <p>Room: {room || "(optional)"}</p>
           <p>Image: {imageBlob ? `${imageBlob.size.toLocaleString()} bytes` : "missing"}</p>

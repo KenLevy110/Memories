@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { finalizeMemory, uploadSignedMedia } from "./api";
+import { finalizeMemory, getMemoryDetail, signReadPlayback, uploadSignedMedia } from "./api";
 
 function buildMemoryDetailResponse() {
   return {
@@ -79,5 +79,39 @@ describe("api client", () => {
     expect(init?.method).toBe("PUT");
     const headers = new Headers(init?.headers);
     expect(headers.get("content-type")).toBe("image/jpeg");
+  });
+
+  it("encodes path parameters before calling the API", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(buildMemoryDetailResponse()), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            media_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            memory_id: "11111111-1111-4111-8111-111111111111",
+            read_url: "https://uploads.example.com/read",
+            read_method: "GET",
+            mime_type: "audio/webm",
+            expires_at: "2026-04-30T00:05:00.000Z",
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      );
+
+    await getMemoryDetail("client/with/slash", "memory?with=query");
+    await signReadPlayback("media/with/slash");
+
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain(
+      "/api/v1/clients/client%2Fwith%2Fslash/memories/memory%3Fwith%3Dquery",
+    );
+    expect(String(fetchMock.mock.calls[1]?.[0])).toContain(
+      "/api/v1/memory-media/media%2Fwith%2Fslash/sign-read",
+    );
   });
 });

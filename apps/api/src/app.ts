@@ -7,6 +7,7 @@ import {
   MEMORY_BODY_MAX_LENGTH,
   MEMORY_ROOM_MAX_LENGTH,
   MEMORY_TITLE_MAX_LENGTH,
+  REQUEST_ID_MAX_LENGTH,
   memoryDetailResponseSchema,
   memoryListResponseSchema,
 } from "@memories/shared";
@@ -20,6 +21,9 @@ import {
   memoryMedia,
   memoryTranscripts,
 } from "./db/schema.js";
+
+type DrizzleDb = ReturnType<typeof drizzle>;
+type MemoryDetailExecutor = Pick<DrizzleDb, "select">;
 
 const logLevel =
   (process.env["LOG_LEVEL"] as
@@ -104,13 +108,6 @@ const METRIC_ROUTE_DEFINITIONS = new Map<
     {
       counterMetricName: "memories_api_memory_finalize_requests_total",
       latencyMetricName: "memories_api_memory_finalize_latency_ms",
-    },
-  ],
-  [
-    `POST ${API_PREFIX}/clients/:clientId/memories/suggest_prompt`,
-    {
-      counterMetricName: "memories_api_suggest_prompt_requests_total",
-      latencyMetricName: "memories_api_suggest_prompt_latency_ms",
     },
   ],
   [
@@ -550,6 +547,17 @@ function parseBearerToken(authorizationHeader?: string): string | null {
   return token;
 }
 
+function normalizeRequestId(rawRequestId: unknown): string | null {
+  if (typeof rawRequestId !== "string") {
+    return null;
+  }
+  const requestId = rawRequestId.trim();
+  if (requestId.length === 0 || requestId.length > REQUEST_ID_MAX_LENGTH) {
+    return null;
+  }
+  return requestId;
+}
+
 function normalizePath(url: string): string {
   return url.split("?", 1)[0] ?? url;
 }
@@ -586,8 +594,11 @@ function describeErrorName(error: unknown): string {
   return "UnknownError";
 }
 
-function resolveImageUploadMaxBytes(options?: BuildAppOptions): number {
-  const fromOption = options?.imageUploadMaxBytes;
+function resolveUploadMaxBytes(
+  fromOption: number | undefined,
+  envKey: string,
+  defaultValue: number,
+): number {
   if (
     typeof fromOption === "number" &&
     Number.isFinite(fromOption) &&
@@ -596,42 +607,31 @@ function resolveImageUploadMaxBytes(options?: BuildAppOptions): number {
   ) {
     return fromOption;
   }
-
-  const fromEnvRaw = process.env["IMAGE_UPLOAD_MAX_BYTES"];
+  const fromEnvRaw = process.env[envKey];
   if (!fromEnvRaw) {
-    return DEFAULT_IMAGE_UPLOAD_MAX_BYTES;
+    return defaultValue;
   }
-
   const fromEnv = Number(fromEnvRaw);
   if (!Number.isFinite(fromEnv) || !Number.isInteger(fromEnv) || fromEnv <= 0) {
-    return DEFAULT_IMAGE_UPLOAD_MAX_BYTES;
+    return defaultValue;
   }
-
   return fromEnv;
 }
 
+function resolveImageUploadMaxBytes(options?: BuildAppOptions): number {
+  return resolveUploadMaxBytes(
+    options?.imageUploadMaxBytes,
+    "IMAGE_UPLOAD_MAX_BYTES",
+    DEFAULT_IMAGE_UPLOAD_MAX_BYTES,
+  );
+}
+
 function resolveAudioUploadMaxBytes(options?: BuildAppOptions): number {
-  const fromOption = options?.audioUploadMaxBytes;
-  if (
-    typeof fromOption === "number" &&
-    Number.isFinite(fromOption) &&
-    Number.isInteger(fromOption) &&
-    fromOption > 0
-  ) {
-    return fromOption;
-  }
-
-  const fromEnvRaw = process.env["AUDIO_UPLOAD_MAX_BYTES"];
-  if (!fromEnvRaw) {
-    return DEFAULT_AUDIO_UPLOAD_MAX_BYTES;
-  }
-
-  const fromEnv = Number(fromEnvRaw);
-  if (!Number.isFinite(fromEnv) || !Number.isInteger(fromEnv) || fromEnv <= 0) {
-    return DEFAULT_AUDIO_UPLOAD_MAX_BYTES;
-  }
-
-  return fromEnv;
+  return resolveUploadMaxBytes(
+    options?.audioUploadMaxBytes,
+    "AUDIO_UPLOAD_MAX_BYTES",
+    DEFAULT_AUDIO_UPLOAD_MAX_BYTES,
+  );
 }
 
 function resolveUploadSignOrigin(): string {
@@ -702,22 +702,25 @@ function createDefaultPlaybackSigner(): PlaybackSigner {
   };
 }
 
-function createDefaultMediaLookup(): {
-  lookup: MediaLookup;
-  close: (() => Promise<void>) | null;
-} {
+function createDefaultDatabase(): {
+  db: DrizzleDb;
+  close: () => Promise<void>;
+} | null {
   const databaseUrl = process.env["DATABASE_URL"]?.trim();
   if (!databaseUrl) {
-    return {
-      lookup: async () => null,
-      close: null,
-    };
+    return null;
   }
-
   const pool = new Pool({ connectionString: databaseUrl });
-  const db = drizzle(pool);
+  return {
+    db: drizzle(pool),
+    close: async () => {
+      await pool.end();
+    },
+  };
+}
 
-  const lookup: MediaLookup = async (mediaId) => {
+function createMediaLookupFromDb(db: DrizzleDb): MediaLookup {
+  return async (mediaId) => {
     const rows = await db
       .select({
         mediaId: memoryMedia.id,
@@ -740,32 +743,11 @@ function createDefaultMediaLookup(): {
 
     return rows[0] ?? null;
   };
-
-  return {
-    lookup,
-    close: async () => {
-      await pool.end();
-    },
-  };
 }
 
-function createDefaultMemoryRepository(): {
-  repository: MemoryRepository | null;
-  close: (() => Promise<void>) | null;
-} {
-  const databaseUrl = process.env["DATABASE_URL"]?.trim();
-  if (!databaseUrl) {
-    return {
-      repository: null,
-      close: null,
-    };
-  }
-
-  const pool = new Pool({ connectionString: databaseUrl });
-  const db = drizzle(pool);
-
+function createMemoryRepositoryFromDb(db: DrizzleDb): MemoryRepository {
   const loadMemoryDetail = async (
-    executor: any,
+    executor: MemoryDetailExecutor,
     input: { practiceId: string; clientId: string; memoryId: string },
   ): Promise<MemoryDetailRecord | null> => {
     const memoryRows = await executor
@@ -857,7 +839,7 @@ function createDefaultMemoryRepository(): {
         updatedAt: memoryRow.updatedAt,
         deletedAt: memoryRow.deletedAt,
       },
-      media: mediaRows.map((row: any) => ({
+      media: mediaRows.map((row) => ({
         mediaId: row.mediaId,
         memoryId: row.memoryId,
         type: row.type,
@@ -1155,12 +1137,7 @@ function createDefaultMemoryRepository(): {
     },
   };
 
-  return {
-    repository,
-    close: async () => {
-      await pool.end();
-    },
-  };
+  return repository;
 }
 
 function normalizeMimeType(rawMimeType: string): string {
@@ -1168,9 +1145,14 @@ function normalizeMimeType(rawMimeType: string): string {
   return (baseMimeType ?? "").trim().toLowerCase();
 }
 
-function parseImageUploadSignBody(
+function parseUploadSignBody(
   body: unknown,
-  maxImageUploadBytes: number,
+  options: {
+    allowedMimeTypes: Set<string>;
+    maxBytes: number;
+    tooLargeCode: string;
+    unsupportedMessage: string;
+  },
 ): { mimeType: string; byteSize: number } {
   if (!body || typeof body !== "object") {
     throw new HttpError(400, "VALIDATION_ERROR", "Request body must be an object.");
@@ -1184,12 +1166,8 @@ function parseImageUploadSignBody(
     throw new HttpError(400, "VALIDATION_ERROR", "mime_type is required.");
   }
   const mimeType = normalizeMimeType(mimeTypeRaw);
-  if (!ALLOWED_IMAGE_MIME_TYPES.has(mimeType)) {
-    throw new HttpError(
-      400,
-      "UNSUPPORTED_MEDIA_TYPE",
-      "Unsupported image mime_type.",
-    );
+  if (!options.allowedMimeTypes.has(mimeType)) {
+    throw new HttpError(400, "UNSUPPORTED_MEDIA_TYPE", options.unsupportedMessage);
   }
 
   if (
@@ -1201,59 +1179,39 @@ function parseImageUploadSignBody(
     throw new HttpError(400, "VALIDATION_ERROR", "byte_size must be a positive integer.");
   }
   const byteSize = byteSizeRaw;
-  if (byteSize > maxImageUploadBytes) {
+  if (byteSize > options.maxBytes) {
     throw new HttpError(
       400,
-      "IMAGE_TOO_LARGE",
-      `byte_size exceeds ${maxImageUploadBytes}.`,
+      options.tooLargeCode,
+      `byte_size exceeds ${options.maxBytes}.`,
     );
   }
 
   return { mimeType, byteSize };
 }
 
+function parseImageUploadSignBody(
+  body: unknown,
+  maxImageUploadBytes: number,
+): { mimeType: string; byteSize: number } {
+  return parseUploadSignBody(body, {
+    allowedMimeTypes: ALLOWED_IMAGE_MIME_TYPES,
+    maxBytes: maxImageUploadBytes,
+    tooLargeCode: "IMAGE_TOO_LARGE",
+    unsupportedMessage: "Unsupported image mime_type.",
+  });
+}
+
 function parseAudioUploadSignBody(
   body: unknown,
   maxAudioUploadBytes: number,
 ): { mimeType: string; byteSize: number } {
-  if (!body || typeof body !== "object") {
-    throw new HttpError(400, "VALIDATION_ERROR", "Request body must be an object.");
-  }
-
-  const payload = body as Record<string, unknown>;
-  const mimeTypeRaw = payload["mime_type"];
-  const byteSizeRaw = payload["byte_size"];
-
-  if (typeof mimeTypeRaw !== "string" || mimeTypeRaw.trim().length === 0) {
-    throw new HttpError(400, "VALIDATION_ERROR", "mime_type is required.");
-  }
-  const mimeType = normalizeMimeType(mimeTypeRaw);
-  if (!ALLOWED_AUDIO_MIME_TYPES.has(mimeType)) {
-    throw new HttpError(
-      400,
-      "UNSUPPORTED_MEDIA_TYPE",
-      "Unsupported audio mime_type.",
-    );
-  }
-
-  if (
-    typeof byteSizeRaw !== "number" ||
-    !Number.isFinite(byteSizeRaw) ||
-    !Number.isInteger(byteSizeRaw) ||
-    byteSizeRaw <= 0
-  ) {
-    throw new HttpError(400, "VALIDATION_ERROR", "byte_size must be a positive integer.");
-  }
-  const byteSize = byteSizeRaw;
-  if (byteSize > maxAudioUploadBytes) {
-    throw new HttpError(
-      400,
-      "AUDIO_TOO_LARGE",
-      `byte_size exceeds ${maxAudioUploadBytes}.`,
-    );
-  }
-
-  return { mimeType, byteSize };
+  return parseUploadSignBody(body, {
+    allowedMimeTypes: ALLOWED_AUDIO_MIME_TYPES,
+    maxBytes: maxAudioUploadBytes,
+    tooLargeCode: "AUDIO_TOO_LARGE",
+    unsupportedMessage: "Unsupported audio mime_type.",
+  });
 }
 
 function parseNonEmptyString(
@@ -1733,25 +1691,23 @@ export function buildApp(options?: BuildAppOptions) {
   const audioUploadMaxBytes = resolveAudioUploadMaxBytes(options);
   const uploadSigner = options?.uploadSigner ?? createDefaultUploadSigner();
   const playbackSigner = options?.playbackSigner ?? createDefaultPlaybackSigner();
-  const defaultMediaLookup = options?.mediaLookup ? null : createDefaultMediaLookup();
-  const mediaLookup = options?.mediaLookup ?? defaultMediaLookup?.lookup;
-  const defaultMemoryRepository = options?.memoryRepository
-    ? null
-    : createDefaultMemoryRepository();
-  const memoryRepository = options?.memoryRepository ?? defaultMemoryRepository?.repository;
+  const defaultDatabase =
+    options?.mediaLookup && options?.memoryRepository ? null : createDefaultDatabase();
+  const mediaLookup =
+    options?.mediaLookup ??
+    (defaultDatabase ? createMediaLookupFromDb(defaultDatabase.db) : undefined);
+  const memoryRepository =
+    options?.memoryRepository ??
+    (defaultDatabase ? createMemoryRepositoryFromDb(defaultDatabase.db) : null);
 
   const app = Fastify({
     logger: {
       level: logLevel,
     },
     disableRequestLogging: true,
-    requestIdHeader: "x-request-id",
+    requestIdHeader: false,
     genReqId: (req) => {
-      const incomingHeader = req.headers["x-request-id"];
-      if (typeof incomingHeader === "string" && incomingHeader.trim().length > 0) {
-        return incomingHeader.trim();
-      }
-      return randomUUID();
+      return normalizeRequestId(req.headers["x-request-id"]) ?? randomUUID();
     },
   });
 
@@ -1759,14 +1715,9 @@ export function buildApp(options?: BuildAppOptions) {
   app.decorateRequest("request_id", "");
   app.decorateRequest("started_at_ms", 0);
 
-  if (defaultMediaLookup?.close) {
+  if (defaultDatabase) {
     app.addHook("onClose", async () => {
-      await defaultMediaLookup.close?.();
-    });
-  }
-  if (defaultMemoryRepository?.close) {
-    app.addHook("onClose", async () => {
-      await defaultMemoryRepository.close?.();
+      await defaultDatabase.close();
     });
   }
 

@@ -10,6 +10,10 @@ const devTokenStorageKey = "memories.devBearerToken";
 
 const apiBase =
   import.meta.env.VITE_API_URL?.trim().replace(/\/$/, "") ?? "http://localhost:3000";
+const devTokenInputEnabled =
+  import.meta.env.DEV ||
+  import.meta.env.MODE === "test" ||
+  import.meta.env.VITE_ENABLE_DEV_TOKEN_INPUT === "true";
 
 type UploadSignResponse = {
   media_id: string;
@@ -72,27 +76,35 @@ function normalizeToken(rawToken: string | null | undefined): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+function pathSegment(value: string): string {
+  return encodeURIComponent(value);
+}
+
+export function isDevTokenInputEnabled(): boolean {
+  return devTokenInputEnabled;
+}
+
 export function getDevBearerToken(): string | null {
   const envToken = normalizeToken(import.meta.env.VITE_DEV_BEARER_TOKEN);
   if (envToken) {
     return envToken;
   }
 
-  if (typeof window === "undefined") {
+  if (typeof window === "undefined" || !devTokenInputEnabled) {
     return null;
   }
   return normalizeToken(window.localStorage.getItem(devTokenStorageKey));
 }
 
 export function setDevBearerToken(token: string): void {
-  if (typeof window === "undefined") {
+  if (typeof window === "undefined" || !devTokenInputEnabled) {
     return;
   }
   window.localStorage.setItem(devTokenStorageKey, token.trim());
 }
 
 export function clearDevBearerToken(): void {
-  if (typeof window === "undefined") {
+  if (typeof window === "undefined" || !devTokenInputEnabled) {
     return;
   }
   window.localStorage.removeItem(devTokenStorageKey);
@@ -291,7 +303,7 @@ export async function getMemories(
     search.set("cursor", cursor);
   }
   const query = search.size > 0 ? `?${search.toString()}` : "";
-  const payload = await requestJson(`/api/v1/clients/${clientId}/memories${query}`);
+  const payload = await requestJson(`/api/v1/clients/${pathSegment(clientId)}/memories${query}`);
   return memoryListResponseSchema.parse(payload);
 }
 
@@ -299,7 +311,9 @@ export async function getMemoryDetail(
   clientId: string,
   memoryId: string,
 ): Promise<MemoryDetailResponse> {
-  const payload = await requestJson(`/api/v1/clients/${clientId}/memories/${memoryId}`);
+  const payload = await requestJson(
+    `/api/v1/clients/${pathSegment(clientId)}/memories/${pathSegment(memoryId)}`,
+  );
   return memoryDetailResponseSchema.parse(payload);
 }
 
@@ -366,7 +380,7 @@ export async function uploadSignedMedia(file: Blob, signedUpload: UploadSignResp
 }
 
 export async function signReadPlayback(mediaId: string): Promise<PlaybackSignResponse> {
-  const payload = await requestJson(`/api/v1/memory-media/${mediaId}/sign-read`, {
+  const payload = await requestJson(`/api/v1/memory-media/${pathSegment(mediaId)}/sign-read`, {
     method: "POST",
   });
   return parsePlaybackSignResponse(payload);
@@ -377,7 +391,7 @@ export async function finalizeMemory(
   request: FinalizeMemoryRequest,
   idempotencyKey: string,
 ): Promise<MemoryDetailResponse> {
-  const payload = await requestJson(`/api/v1/clients/${clientId}/memories`, {
+  const payload = await requestJson(`/api/v1/clients/${pathSegment(clientId)}/memories`, {
     method: "POST",
     headers: {
       "idempotency-key": idempotencyKey,

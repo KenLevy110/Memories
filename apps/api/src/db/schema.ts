@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -89,7 +90,7 @@ export const memoryTranscripts = pgTable(
     clientId: uuid("client_id").notNull(),
     status: transcriptStatusEnum("status").notNull().default("pending"),
     text: text("text"),
-    confidence: integer("confidence"),
+    confidence: doublePrecision("confidence"),
     vendorReference: varchar("vendor_reference", { length: 255 }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

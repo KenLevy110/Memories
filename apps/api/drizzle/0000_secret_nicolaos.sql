@@ -49,7 +49,7 @@ CREATE TABLE "memory_transcripts" (
 	"client_id" uuid NOT NULL,
 	"status" "transcript_status" DEFAULT 'pending' NOT NULL,
 	"text" text,
-	"confidence" integer,
+	"confidence" double precision,
 	"vendor_reference" varchar(255),
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL

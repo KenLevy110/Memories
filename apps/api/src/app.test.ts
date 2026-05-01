@@ -415,6 +415,22 @@ describe("api auth shell", () => {
     expect(body.request_id).toBe("req-unauth");
   });
 
+  it("does not reflect overlong request ids", async () => {
+    const overlongRequestId = "x".repeat(129);
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1",
+      headers: { "x-request-id": overlongRequestId },
+    });
+
+    expect(res.statusCode).toBe(401);
+    expect(res.headers["x-request-id"]).not.toBe(overlongRequestId);
+    const body = JSON.parse(res.body) as { request_id: string };
+    expect(body.request_id).not.toBe(overlongRequestId);
+    expect(body.request_id.length).toBeLessThanOrEqual(128);
+  });
+
   it("returns 401 for invalid bearer token", async () => {
     const res = await app.inject({
       method: "GET",

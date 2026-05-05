@@ -29,12 +29,15 @@ jobs:
 
       - name: Run checks when package.json exists
         shell: bash
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
         run: |
           if [ -f package.json ]; then
             npm ci
             npm run lint --if-present
             npm run typecheck --if-present
             npm test --if-present
+            npm run test:e2e --if-present
           else
             echo "No package.json at repo root; skipping Node checks."
           fi

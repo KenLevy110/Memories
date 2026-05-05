@@ -67,13 +67,14 @@ To run only one app (for example a second terminal is already running the other)
 | `npm run lint` | ESLint in workspaces that define `lint` |
 | `npm run typecheck` | Typecheck all workspaces |
 | `npm run test` | Tests (`@memories/api`, `@memories/shared`) |
+| `npm run test:e2e` | Playwright API checks in `@memories/api` (e.g. development-plan 12.5 / T8 finalize); first run may need `npm run test:e2e:install -w @memories/api` |
 
 ## New project / template alignment
 
 - Follow `NEW_PROJECT_CHECKLIST.md` for rules, `CODEOWNERS`, security contacts, and CI.
 - `TEMPLATE_SYNC.md` explains staying aligned with `cursor-template` when you pull reusable changes.
 - Run `.\scripts\verify-template.ps1` after renames; use `-Strict` when cleaning placeholders (e.g. `@your-org` in `.github/CODEOWNERS`).
-- CI includes **`docs-smoke`** (`scripts/check-docs.sh`) plus **`checks`** (lint, typecheck, tests). In GitHub branch protection, require **`docs-smoke`** and **`checks`**, and the Security jobs you use (see `CONTRIBUTING.md`).
+- CI includes **`docs-smoke`** (`scripts/check-docs.sh`) plus **`checks`** (lint, typecheck, unit tests, and `npm run test:e2e` when present). In GitHub branch protection, require **`docs-smoke`** and **`checks`**, and the Security jobs you use (see `CONTRIBUTING.md`).
 - DB migrates: `.github/workflows/migrate.yml` supports manual production runs and optional auto-on-`main` mode controlled by `ENABLE_AUTO_PROD_MIGRATE`; see `docs/infrastructure.md` (section 3).
 - Git hooks (agent transcript archive): `git config core.hooksPath .githooks`. Set your Cursor transcript directory via `scripts/sync-agent-chats.local.env` (copy from `scripts/sync-agent-chats.local.env.example`) or `CURSOR_AGENT_TRANSCRIPTS_DIR`; see `docs/agent-chats/README.md`.
 

@@ -1,4 +1,16 @@
 {
-  "window.zoomLevel": 2
+  "window.zoomLevel": 2,
+  "terminal.integrated.profiles.windows": {
+    "PowerShell (short path)": {
+      "source": "PowerShell",
+      "args": [
+        "-NoExit",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        ". '${workspaceFolder}/scripts/powershell-terminal-layout.ps1'"
+      ]
+    }
+  },
+  "terminal.integrated.defaultProfile.windows": "PowerShell (Memories prompt)"
 }
-

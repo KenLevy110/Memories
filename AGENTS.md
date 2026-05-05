@@ -38,6 +38,7 @@ These three themes apply to every initiative; specifics live in the rules above,
 - Install dependencies: `npm install` (or the package manager this repo uses).
 - Run API + web locally: `npm run dev` (root); or `npm run dev:api` / `npm run dev:web` separately. For local JWT without a platform IdP, run `npm run dev:local-auth` in a second terminal (see root `README.md`).
 - Run all tests: `npm run test`
+- Run API Playwright HTTP checks (e.g. T8 finalize matrix): `npm run test:e2e` (see `apps/api/package.json`; first-time setup: `npm run test:e2e:install -w @memories/api`)
 - Run full CI-equivalent checks: `npm run lint`, `npm run typecheck`, and the project’s CI test scripts
 
 Run relevant tests after changes and before marking work complete. Keep CI green and align local verification with the repo’s workflow configuration.

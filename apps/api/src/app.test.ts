@@ -57,6 +57,36 @@ describe("api auth shell", () => {
     expect(res.headers["x-health-probe"]).toBe("legacy-api");
   });
 
+  it("responds to CORS preflight for an allowed web origin without a bearer token", async () => {
+    const res = await app.inject({
+      method: "OPTIONS",
+      url: `/api/v1/clients/${playbackClientId}/memories`,
+      headers: {
+        origin: "http://localhost:5173",
+        "access-control-request-method": "GET",
+        "access-control-request-headers": "authorization",
+      },
+    });
+    expect(res.statusCode).toBe(204);
+    expect(res.headers["access-control-allow-origin"]).toBe("http://localhost:5173");
+    expect(res.headers["access-control-allow-methods"]).toMatch(/GET/);
+    expect(res.headers["access-control-allow-headers"]?.toLowerCase()).toContain("authorization");
+  });
+
+  it("adds CORS headers to authenticated API responses for an allowed origin", async () => {
+    const token = await createToken();
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1",
+      headers: {
+        authorization: `Bearer ${token}`,
+        origin: "http://127.0.0.1:5173",
+      },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["access-control-allow-origin"]).toBe("http://127.0.0.1:5173");
+  });
+
   it("returns 401 for unsigned /api/v1 requests", async () => {
     const res = await app.inject({
       method: "GET",
@@ -284,6 +314,68 @@ describe("api auth shell", () => {
     expect(res.statusCode).toBe(400);
     const body = JSON.parse(res.body) as { code: string };
     expect(body.code).toBe("UNSUPPORTED_MEDIA_TYPE");
+  });
+
+  it("returns signed image upload URL for image/avif", async () => {
+    const token = await createToken({
+      user_id: "c01f72aa-6f01-4d01-b601-4d017201f72a",
+      practice_id: "a1b2c3d4-e5f6-4789-a012-3456789abcde",
+      roles: ["GUIDE"],
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/uploads/images/sign",
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        mime_type: "image/avif",
+        byte_size: 120_000,
+      },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body) as { required_headers: Record<string, string> };
+    expect(body.required_headers["content-type"]).toBe("image/avif");
+  });
+
+  it("returns signed image upload URL for image/bmp and image/x-ms-bmp", async () => {
+    const token = await createToken({
+      user_id: "b0b0b0b0-b0b0-40b0-b0b0-b0b0b0b0b0b0",
+      practice_id: "c1c1c1c1-c1c1-41c1-c1c1-c1c1c1c1c1c1",
+      roles: ["GUIDE"],
+    });
+
+    const bmp = await app.inject({
+      method: "POST",
+      url: "/api/v1/uploads/images/sign",
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        mime_type: "image/bmp",
+        byte_size: 40_000,
+      },
+    });
+    expect(bmp.statusCode).toBe(200);
+    expect(
+      JSON.parse(bmp.body) as { required_headers: Record<string, string> },
+    ).toMatchObject({
+      required_headers: { "content-type": "image/bmp" },
+    });
+
+    const msBmp = await app.inject({
+      method: "POST",
+      url: "/api/v1/uploads/images/sign",
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        mime_type: "image/x-ms-bmp",
+        byte_size: 40_000,
+      },
+    });
+    expect(msBmp.statusCode).toBe(200);
+    expect(
+      JSON.parse(msBmp.body) as { required_headers: Record<string, string> },
+    ).toMatchObject({
+      required_headers: { "content-type": "image/x-ms-bmp" },
+    });
   });
 
   it("returns 400 when image size exceeds configured limit", async () => {

@@ -317,8 +317,7 @@ export async function getMemoryDetail(
   return memoryDetailResponseSchema.parse(payload);
 }
 
-export async function signImageUpload(file: Blob): Promise<UploadSignResponse> {
-  const mimeType = file.type || "image/jpeg";
+export async function signImageUpload(file: Blob, mimeType: string): Promise<UploadSignResponse> {
   const payload = await requestJson("/api/v1/uploads/images/sign", {
     method: "POST",
     body: JSON.stringify({

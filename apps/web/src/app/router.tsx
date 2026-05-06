@@ -23,6 +23,7 @@ import {
   type FinalizeMemoryRequest,
 } from "../lib/api";
 import { addFinalizeJob, flushFinalizeQueue } from "../lib/retryQueue";
+import { resolveImageMimeForUpload } from "../lib/imageMime";
 import {
   clearCaptureDraft,
   loadCaptureDraft,
@@ -315,14 +316,21 @@ function CapturePage() {
   useEffect(() => {
     let cancelled = false;
     void loadCaptureDraft(clientId)
-      .then((draft) => {
+      .then(async (draft) => {
         if (!draft || cancelled) {
           return;
         }
         setTitle(draft.title);
         setRoom(draft.room);
         setImageBlob(draft.imageBlob);
-        setImageMimeType(draft.imageMimeType);
+        if (draft.imageBlob) {
+          const mime = await resolveImageMimeForUpload(draft.imageBlob, draft.imageMimeType);
+          if (!cancelled) {
+            setImageMimeType(mime);
+          }
+        } else if (!cancelled) {
+          setImageMimeType(null);
+        }
         setAudioBlob(draft.audioBlob);
         setAudioMimeType(draft.audioMimeType);
         setIdempotencyKey(draft.idempotencyKey);
@@ -453,8 +461,9 @@ function CapturePage() {
     setSaveMessage(null);
 
     try {
+      const resolvedImageMime = await resolveImageMimeForUpload(imageBlob, imageMimeType);
       const [signedImage, signedAudio] = await Promise.all([
-        signImageUpload(imageBlob),
+        signImageUpload(imageBlob, resolvedImageMime),
         signAudioUpload(audioBlob),
       ]);
       await Promise.all([
@@ -471,7 +480,7 @@ function CapturePage() {
             media_id: signedImage.media_id,
             type: "image",
             storage_key: signedImage.storage_key,
-            mime_type: imageMimeType ?? "image/jpeg",
+            mime_type: resolvedImageMime,
             byte_size: imageBlob.size,
             sort_order: 0,
           },
@@ -536,7 +545,9 @@ function CapturePage() {
             onChange={(event) => {
               const file = event.currentTarget.files?.[0] ?? null;
               setImageBlob(file);
-              setImageMimeType(file?.type ?? "image/jpeg");
+              void resolveImageMimeForUpload(file, null).then((mime) => {
+                setImageMimeType(mime);
+              });
             }}
           />
           {imagePreviewUrl ? <img className="preview" src={imagePreviewUrl} alt="Photo preview" /> : null}

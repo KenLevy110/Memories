@@ -55,7 +55,8 @@ describe("capture flow smoke", () => {
     window.localStorage.setItem("memories.devBearerToken", "token-for-capture-test");
     window.history.pushState({}, "", "/clients/00000000-0000-4000-8000-000000000001/capture?step=photo");
 
-    const fetchCalls: Array<{ url: string; method: string; headers: Headers }> = [];
+    const fetchCalls: Array<{ url: string; method: string; headers: Headers; body?: string }> =
+      [];
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = String(input);
       const method = init?.method ?? "GET";
@@ -63,6 +64,7 @@ describe("capture flow smoke", () => {
         url,
         method,
         headers: new Headers(init?.headers),
+        body: typeof init?.body === "string" ? init.body : undefined,
       });
 
       if (url.endsWith("/api/v1/uploads/images/sign")) {
@@ -149,6 +151,14 @@ describe("capture flow smoke", () => {
     await screen.findByRole("heading", { name: "Memory saved" });
 
     await waitFor(() => {
+      const imageSignCall = fetchCalls.find((call) =>
+        call.url.endsWith("/api/v1/uploads/images/sign"),
+      );
+      expect(imageSignCall).toBeDefined();
+      expect(JSON.parse(imageSignCall?.body ?? "{}") as { mime_type: string }).toMatchObject({
+        mime_type: "image/jpeg",
+      });
+
       const finalizeCall = fetchCalls.find((call) =>
         call.url.includes("/api/v1/clients/00000000-0000-4000-8000-000000000001/memories"),
       );

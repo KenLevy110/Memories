@@ -52,6 +52,9 @@ const ALLOWED_IMAGE_MIME_TYPES = new Set([
   "image/jpeg",
   "image/png",
   "image/webp",
+  "image/avif",
+  "image/bmp",
+  "image/x-ms-bmp",
   "image/heic",
   "image/heif",
 ]);
@@ -560,6 +563,30 @@ function normalizeRequestId(rawRequestId: unknown): string | null {
 
 function normalizePath(url: string): string {
   return url.split("?", 1)[0] ?? url;
+}
+
+const DEFAULT_WEB_DEV_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"] as const;
+
+function resolveCorsAllowedOrigins(): Set<string> {
+  const set = new Set<string>(DEFAULT_WEB_DEV_ORIGINS);
+  const raw = process.env["WEB_ORIGIN"]?.trim();
+  if (!raw) {
+    return set;
+  }
+  for (const part of raw.split(",")) {
+    const origin = part.trim();
+    if (origin.length > 0) {
+      set.add(origin);
+    }
+  }
+  return set;
+}
+
+function matchAllowedCorsOrigin(originHeader: unknown, allowed: Set<string>): string | null {
+  if (typeof originHeader !== "string" || originHeader.length === 0) {
+    return null;
+  }
+  return allowed.has(originHeader) ? originHeader : null;
 }
 
 function resolveRoutePattern(request: { url: string; routeOptions?: unknown }): string {
@@ -1691,6 +1718,7 @@ export function buildApp(options?: BuildAppOptions) {
   const audioUploadMaxBytes = resolveAudioUploadMaxBytes(options);
   const uploadSigner = options?.uploadSigner ?? createDefaultUploadSigner();
   const playbackSigner = options?.playbackSigner ?? createDefaultPlaybackSigner();
+  const corsAllowedOrigins = resolveCorsAllowedOrigins();
   const defaultDatabase =
     options?.mediaLookup && options?.memoryRepository ? null : createDefaultDatabase();
   const mediaLookup =
@@ -1727,6 +1755,24 @@ export function buildApp(options?: BuildAppOptions) {
     reply.header("x-request-id", request.id);
 
     const path = normalizePath(request.url);
+    const allowOrigin = matchAllowedCorsOrigin(request.headers.origin, corsAllowedOrigins);
+    if (allowOrigin) {
+      reply.header("Access-Control-Allow-Origin", allowOrigin);
+      reply.header("Vary", "Origin");
+    }
+
+    if (request.method === "OPTIONS") {
+      if (allowOrigin) {
+        reply.header("Access-Control-Allow-Methods", "GET, HEAD, POST, PATCH, DELETE, OPTIONS");
+        reply.header(
+          "Access-Control-Allow-Headers",
+          "authorization, content-type, accept, idempotency-key, x-request-id",
+        );
+        reply.header("Access-Control-Max-Age", "86400");
+      }
+      return reply.status(204).send();
+    }
+
     if (path === HEALTH_PATH) {
       return;
     }

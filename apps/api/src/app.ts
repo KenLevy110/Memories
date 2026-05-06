@@ -1,5 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
-import Fastify from "fastify";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import Fastify, { type FastifyInstance } from "fastify";
 import {
   apiErrorSchema,
   cursorPaginationQuerySchema,
@@ -589,6 +591,41 @@ function matchAllowedCorsOrigin(originHeader: unknown, allowed: Set<string>): st
   return allowed.has(originHeader) ? originHeader : null;
 }
 
+/**
+ * Strict allowlist from WEB_ORIGIN / defaults, plus (non-production only) any http(s) Origin
+ * whose host is loopback so Vite on arbitrary ports and localhost vs 127.0.0.1 still work with
+ * signed PUT uploads to this API. Production keeps the strict allowlist only.
+ */
+function resolveCorsAllowOrigin(originHeader: unknown, allowed: Set<string>): string | null {
+  const strict = matchAllowedCorsOrigin(originHeader, allowed);
+  if (strict) {
+    return strict;
+  }
+  if (process.env["NODE_ENV"] === "production") {
+    return null;
+  }
+  if (typeof originHeader !== "string") {
+    return null;
+  }
+  const trimmed = originHeader.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return null;
+    }
+    const host = parsed.hostname.toLowerCase();
+    if (host === "localhost" || host === "127.0.0.1" || host === "::1") {
+      return trimmed;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 function resolveRoutePattern(request: { url: string; routeOptions?: unknown }): string {
   const routeUrl = (
     request.routeOptions as
@@ -705,6 +742,115 @@ function createDefaultUploadSigner(): UploadSigner {
       },
     };
   };
+}
+
+function isDevMediaSinkActive(): boolean {
+  return process.env["NODE_ENV"] !== "production";
+}
+
+async function maybePersistDevUploadSink(
+  body: Buffer,
+  practiceId: string,
+  kind: "images" | "audio",
+  mediaId: string,
+): Promise<void> {
+  const raw = process.env["DEV_UPLOAD_SINK_DIR"]?.trim();
+  if (!raw) {
+    return;
+  }
+  const root = path.resolve(raw);
+  const absolute = path.resolve(root, practiceId, kind, `${mediaId}.bin`);
+  const relative = path.relative(root, absolute);
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+    return;
+  }
+  await mkdir(path.dirname(absolute), { recursive: true });
+  await writeFile(absolute, body);
+}
+
+function shouldSkipAuthForDevMediaSink(method: string, path: string): boolean {
+  if (!isDevMediaSinkActive()) {
+    return false;
+  }
+  if (method !== "PUT" && method !== "GET") {
+    return false;
+  }
+  const segments = path.split("/").filter(Boolean);
+  if (segments.length !== 4 || segments[1] !== "uploads") {
+    return false;
+  }
+  if (segments[2] !== "images" && segments[2] !== "audio") {
+    return false;
+  }
+  return isUuid(segments[0]) && isUuid(segments[3]);
+}
+
+function registerDevMediaSinkRoutes(
+  app: FastifyInstance,
+  maxImageUploadBytes: number,
+  maxAudioUploadBytes: number,
+): void {
+  const maxBinaryUploadBytes = Math.max(maxImageUploadBytes, maxAudioUploadBytes);
+  app.addContentTypeParser(
+    /^image\/.+|^audio\/.+$/i,
+    { parseAs: "buffer", bodyLimit: maxBinaryUploadBytes },
+    (_req, body, done) => {
+      done(null, body);
+    },
+  );
+
+  const tinyPng = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+    "base64",
+  );
+
+  const tinyWav = Buffer.from(
+    "UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA=",
+    "base64",
+  );
+
+  app.put("/:practiceId/uploads/images/:mediaId", async (request, reply) => {
+    const { practiceId, mediaId } = request.params as { practiceId: string; mediaId: string };
+    if (!isUuid(practiceId) || !isUuid(mediaId)) {
+      throw new HttpError(400, "VALIDATION_ERROR", "Invalid upload path.");
+    }
+    const body = request.body as Buffer;
+    await maybePersistDevUploadSink(body, practiceId, "images", mediaId);
+    return reply.status(204).send();
+  });
+
+  app.put("/:practiceId/uploads/audio/:mediaId", async (request, reply) => {
+    const { practiceId, mediaId } = request.params as { practiceId: string; mediaId: string };
+    if (!isUuid(practiceId) || !isUuid(mediaId)) {
+      throw new HttpError(400, "VALIDATION_ERROR", "Invalid upload path.");
+    }
+    const body = request.body as Buffer;
+    await maybePersistDevUploadSink(body, practiceId, "audio", mediaId);
+    return reply.status(204).send();
+  });
+
+  app.get("/:practiceId/uploads/images/:mediaId", async (_request, reply) => {
+    reply.header("cache-control", "no-store");
+    reply.header("content-type", "image/png");
+    return reply.send(tinyPng);
+  });
+
+  app.get("/:practiceId/uploads/audio/:mediaId", async (_request, reply) => {
+    reply.header("cache-control", "no-store");
+    reply.header("content-type", "audio/wav");
+    return reply.send(tinyWav);
+  });
+
+  app.addHook("onSend", async (request, reply, payload) => {
+    const p = normalizePath(request.url);
+    if (
+      shouldSkipAuthForDevMediaSink(request.method, p) &&
+      reply.getHeader("access-control-allow-origin")
+    ) {
+      reply.header("Access-Control-Allow-Private-Network", "true");
+    }
+    return payload;
+  });
 }
 
 function createDefaultPlaybackSigner(): PlaybackSigner {
@@ -1739,6 +1885,10 @@ export function buildApp(options?: BuildAppOptions) {
     },
   });
 
+  if (isDevMediaSinkActive()) {
+    registerDevMediaSinkRoutes(app, imageUploadMaxBytes, audioUploadMaxBytes);
+  }
+
   app.decorateRequest("auth", null);
   app.decorateRequest("request_id", "");
   app.decorateRequest("started_at_ms", 0);
@@ -1755,7 +1905,7 @@ export function buildApp(options?: BuildAppOptions) {
     reply.header("x-request-id", request.id);
 
     const path = normalizePath(request.url);
-    const allowOrigin = matchAllowedCorsOrigin(request.headers.origin, corsAllowedOrigins);
+    const allowOrigin = resolveCorsAllowOrigin(request.headers.origin, corsAllowedOrigins);
     if (allowOrigin) {
       reply.header("Access-Control-Allow-Origin", allowOrigin);
       reply.header("Vary", "Origin");
@@ -1769,11 +1919,18 @@ export function buildApp(options?: BuildAppOptions) {
           "authorization, content-type, accept, idempotency-key, x-request-id",
         );
         reply.header("Access-Control-Max-Age", "86400");
+        if (String(request.headers["access-control-request-private-network"]).toLowerCase() === "true") {
+          reply.header("Access-Control-Allow-Private-Network", "true");
+        }
       }
       return reply.status(204).send();
     }
 
     if (path === HEALTH_PATH) {
+      return;
+    }
+
+    if (shouldSkipAuthForDevMediaSink(request.method, path)) {
       return;
     }
 

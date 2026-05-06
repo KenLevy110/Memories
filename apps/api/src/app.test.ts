@@ -57,6 +57,54 @@ describe("api auth shell", () => {
     expect(res.headers["x-health-probe"]).toBe("legacy-api");
   });
 
+  it("accepts dev upload sink PUT without bearer token when NODE_ENV is not production", async () => {
+    const practiceId = "11111111-1111-4111-8111-111111111111";
+    const mediaId = "22222222-2222-4222-8222-222222222222";
+    const res = await app.inject({
+      method: "PUT",
+      url: `/${practiceId}/uploads/images/${mediaId}`,
+      headers: {
+        "content-type": "image/jpeg",
+        origin: "http://localhost:5173",
+      },
+      payload: Buffer.from([0xff, 0xd8, 0xff]),
+    });
+    expect(res.statusCode).toBe(204);
+    expect(res.body).toBe("");
+    expect(res.headers["access-control-allow-private-network"]).toBe("true");
+  });
+
+  it("returns Access-Control-Allow-Private-Network on upload sink OPTIONS when requested", async () => {
+    const practiceId = "11111111-1111-4111-8111-111111111111";
+    const mediaId = "22222222-2222-4222-8222-222222222222";
+    const res = await app.inject({
+      method: "OPTIONS",
+      url: `/${practiceId}/uploads/images/${mediaId}`,
+      headers: {
+        origin: "http://localhost:5173",
+        "access-control-request-method": "PUT",
+        "access-control-request-headers": "content-type",
+        "access-control-request-private-network": "true",
+      },
+    });
+    expect(res.statusCode).toBe(204);
+    expect(res.headers["access-control-allow-private-network"]).toBe("true");
+  });
+
+  it("reflects loopback Origin for CORS when NODE_ENV is not production (arbitrary Vite port)", async () => {
+    const res = await app.inject({
+      method: "OPTIONS",
+      url: "/11111111-1111-4111-8111-111111111111/uploads/images/22222222-2222-4222-8222-222222222222",
+      headers: {
+        origin: "http://localhost:5999",
+        "access-control-request-method": "PUT",
+        "access-control-request-headers": "content-type",
+      },
+    });
+    expect(res.statusCode).toBe(204);
+    expect(res.headers["access-control-allow-origin"]).toBe("http://localhost:5999");
+  });
+
   it("responds to CORS preflight for an allowed web origin without a bearer token", async () => {
     const res = await app.inject({
       method: "OPTIONS",

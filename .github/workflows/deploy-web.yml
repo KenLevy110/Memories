@@ -1,0 +1,64 @@
+# Build the @memories/web Vite app and deploy to Firebase Hosting.
+# Auth via Workload Identity Federation; no Firebase token in repo secrets.
+#
+# Required repository secrets / variables:
+#   GCP_PROJECT_ID                   serves as the Firebase project id (one project per env)
+#   GCP_WIF_PROVIDER
+#   GCP_DEPLOY_SA
+#   API_URL                          public URL of the deployed API, e.g. https://memories-api-XXXX.a.run.app
+
+name: Deploy Web (Firebase Hosting)
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main, master]
+    paths:
+      - "apps/web/**"
+      - "packages/shared/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/deploy-web.yml"
+
+concurrency:
+  group: deploy-web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web with production API URL
+        env:
+          VITE_API_URL: ${{ secrets.API_URL }}
+        run: npm run build -w @memories/web
+
+      - name: Deploy to Firebase Hosting
+        env:
+          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+        working-directory: apps/web
+        run: |
+          set -euo pipefail
+          npx --yes firebase-tools@13 deploy --only hosting --project "$PROJECT_ID" --non-interactive

@@ -12,5 +12,5 @@
       ]
     }
   },
-  "terminal.integrated.defaultProfile.windows": "PowerShell (Memories prompt)"
+  "terminal.integrated.defaultProfile.windows": "PowerShell (short path)"
 }

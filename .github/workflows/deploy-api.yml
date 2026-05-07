@@ -1,0 +1,103 @@
+# Build the @memories/api container, push to Artifact Registry, and deploy
+# to Cloud Run. Authentication uses Workload Identity Federation: no JSON keys.
+#
+# Required repository secrets / variables (set after running infra/gcp/bootstrap.sh):
+#   GCP_PROJECT_ID
+#   GCP_REGION                       e.g. us-west1
+#   GCP_WIF_PROVIDER                 projects/NUMBER/locations/global/workloadIdentityPools/POOL/providers/PROVIDER
+#   GCP_DEPLOY_SA                    memories-deploy@PROJECT.iam.gserviceaccount.com
+#   GCP_RUNTIME_SA                   memories-api-run@PROJECT.iam.gserviceaccount.com
+#   GCP_ARTIFACT_REPO                memories
+#   GCP_API_SERVICE                  memories-api
+#   GCP_MEDIA_BUCKET                 memories-prod-media
+#   GCP_SQL_INSTANCE_CONNECTION      PROJECT:REGION:INSTANCE
+#
+# Triggers: manual dispatch and pushes to main that touch apps/api or shared.
+
+name: Deploy API (Cloud Run)
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main, master]
+    paths:
+      - "apps/api/**"
+      - "packages/shared/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/deploy-api.yml"
+
+concurrency:
+  group: deploy-api-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and push image
+        env:
+          IMAGE: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_ARTIFACT_REPO }}/${{ secrets.GCP_API_SERVICE }}:${{ github.sha }}
+        run: |
+          set -euo pipefail
+          docker build -f apps/api/Dockerfile -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Deploy to Cloud Run
+        env:
+          SERVICE: ${{ secrets.GCP_API_SERVICE }}
+          REGION: ${{ secrets.GCP_REGION }}
+          RUNTIME_SA: ${{ secrets.GCP_RUNTIME_SA }}
+          MEDIA_BUCKET: ${{ secrets.GCP_MEDIA_BUCKET }}
+          SQL_INSTANCE: ${{ secrets.GCP_SQL_INSTANCE_CONNECTION }}
+        run: |
+          set -euo pipefail
+          gcloud run deploy "$SERVICE" \
+            --image="$IMAGE" \
+            --region="$REGION" \
+            --platform=managed \
+            --allow-unauthenticated \
+            --service-account="$RUNTIME_SA" \
+            --add-cloudsql-instances="$SQL_INSTANCE" \
+            --set-env-vars="NODE_ENV=production,GCS_BUCKET=$MEDIA_BUCKET,LOG_LEVEL=info" \
+            --set-secrets="DATABASE_URL=DATABASE_URL:latest,JWT_ISSUER=JWT_ISSUER:latest,JWT_AUDIENCE=JWT_AUDIENCE:latest,JWT_JWKS_URI=JWT_JWKS_URI:latest" \
+            --cpu=1 \
+            --memory=512Mi \
+            --concurrency=80 \
+            --min-instances=0 \
+            --max-instances=10 \
+            --timeout=300
+
+      - name: Smoke test /health
+        run: |
+          set -euo pipefail
+          URL="$(gcloud run services describe ${{ secrets.GCP_API_SERVICE }} --region=${{ secrets.GCP_REGION }} --format='value(status.url)')"
+          echo "Service URL: $URL"
+          for i in 1 2 3 4 5; do
+            if curl -fsSL "$URL/health" > /tmp/health.json; then
+              cat /tmp/health.json
+              exit 0
+            fi
+            echo "Health probe attempt $i failed; retrying…"
+            sleep 5
+          done
+          echo "::error::Health probe failed after 5 attempts."
+          exit 1

@@ -23,6 +23,10 @@ import {
   memoryMedia,
   memoryTranscripts,
 } from "./db/schema.js";
+import {
+  createGcsPlaybackSigner,
+  createGcsUploadSigner,
+} from "./storage/gcsSigner.js";
 
 type DrizzleDb = ReturnType<typeof drizzle>;
 type MemoryDetailExecutor = Pick<DrizzleDb, "select">;
@@ -591,10 +595,35 @@ function matchAllowedCorsOrigin(originHeader: unknown, allowed: Set<string>): st
   return allowed.has(originHeader) ? originHeader : null;
 }
 
+/** RFC1918 private IPv4 hostnames only (no DNS names). Used for dev-only CORS relaxation. */
+function isRfc1918Ipv4Hostname(hostname: string): boolean {
+  const segments = hostname.split(".");
+  if (segments.length !== 4) {
+    return false;
+  }
+  const octets = segments.map((segment) => Number(segment));
+  if (!octets.every((value) => Number.isInteger(value) && value >= 0 && value <= 255)) {
+    return false;
+  }
+  const [a, b] = octets;
+  if (a === 10) {
+    return true;
+  }
+  if (a === 192 && b === 168) {
+    return true;
+  }
+  if (a === 172 && b >= 16 && b <= 31) {
+    return true;
+  }
+  return false;
+}
+
 /**
  * Strict allowlist from WEB_ORIGIN / defaults, plus (non-production only) any http(s) Origin
  * whose host is loopback so Vite on arbitrary ports and localhost vs 127.0.0.1 still work with
- * signed PUT uploads to this API. Production keeps the strict allowlist only.
+ * signed PUT uploads to this API. In development, RFC1918 LAN IPs (e.g. http://192.168.x.x:5173)
+ * are also echoed so mobile-on-Wi-Fi testing works without editing WEB_ORIGIN each time.
+ * Production keeps the strict allowlist only.
  */
 function resolveCorsAllowOrigin(originHeader: unknown, allowed: Set<string>): string | null {
   const strict = matchAllowedCorsOrigin(originHeader, allowed);
@@ -620,10 +649,35 @@ function resolveCorsAllowOrigin(originHeader: unknown, allowed: Set<string>): st
     if (host === "localhost" || host === "127.0.0.1" || host === "::1") {
       return trimmed;
     }
+    if (isRfc1918Ipv4Hostname(host)) {
+      return trimmed;
+    }
   } catch {
     return null;
   }
   return null;
+}
+
+/**
+ * Prefer `Origin` (scripts cannot set it). Some tooling shows no Origin on blocked requests;
+ * `Referer` still reflects the initiating document and can drive the same allowlist checks.
+ */
+function resolveBrowserOriginForCors(headers: {
+  origin?: unknown;
+  referer?: unknown;
+}): { value: string | null; usedRefererFallback: boolean } {
+  if (typeof headers.origin === "string" && headers.origin.trim().length > 0) {
+    return { value: headers.origin.trim(), usedRefererFallback: false };
+  }
+  const refererRaw = headers.referer;
+  if (typeof refererRaw !== "string" || refererRaw.trim().length === 0) {
+    return { value: null, usedRefererFallback: false };
+  }
+  try {
+    return { value: new URL(refererRaw.trim()).origin, usedRefererFallback: true };
+  } catch {
+    return { value: null, usedRefererFallback: false };
+  }
 }
 
 function resolveRoutePattern(request: { url: string; routeOptions?: unknown }): string {
@@ -715,6 +769,27 @@ function resolvePlaybackSignOrigin(): string {
   return resolveUploadSignOrigin();
 }
 
+function resolveGcsBucket(): string | null {
+  const raw = process.env["GCS_BUCKET"]?.trim();
+  return raw && raw.length > 0 ? raw : null;
+}
+
+function resolveDefaultUploadSigner(): UploadSigner {
+  const bucket = resolveGcsBucket();
+  if (bucket) {
+    return createGcsUploadSigner({ bucket });
+  }
+  return createDefaultUploadSigner();
+}
+
+function resolveDefaultPlaybackSigner(): PlaybackSigner {
+  const bucket = resolveGcsBucket();
+  if (bucket) {
+    return createGcsPlaybackSigner({ bucket });
+  }
+  return createDefaultPlaybackSigner();
+}
+
 function createDefaultUploadSigner(): UploadSigner {
   const origin = resolveUploadSignOrigin();
 
@@ -775,6 +850,10 @@ function shouldSkipAuthForDevMediaSink(method: string, path: string): boolean {
   if (method !== "PUT" && method !== "GET") {
     return false;
   }
+  return isDevMediaSinkPath(path);
+}
+
+function isDevMediaSinkPath(path: string): boolean {
   const segments = path.split("/").filter(Boolean);
   if (segments.length !== 4 || segments[1] !== "uploads") {
     return false;
@@ -783,6 +862,13 @@ function shouldSkipAuthForDevMediaSink(method: string, path: string): boolean {
     return false;
   }
   return isUuid(segments[0]) && isUuid(segments[3]);
+}
+
+function shouldAllowAnyCorsOriginForDevMediaSink(method: string, path: string): boolean {
+  if (!isDevMediaSinkActive() || !isDevMediaSinkPath(path)) {
+    return false;
+  }
+  return method === "PUT" || method === "GET" || method === "OPTIONS";
 }
 
 function registerDevMediaSinkRoutes(
@@ -1862,8 +1948,8 @@ export function buildApp(options?: BuildAppOptions) {
   const jwtVerifier = createJwtVerifier(resolveJwtAuthConfig(options));
   const imageUploadMaxBytes = resolveImageUploadMaxBytes(options);
   const audioUploadMaxBytes = resolveAudioUploadMaxBytes(options);
-  const uploadSigner = options?.uploadSigner ?? createDefaultUploadSigner();
-  const playbackSigner = options?.playbackSigner ?? createDefaultPlaybackSigner();
+  const uploadSigner = options?.uploadSigner ?? resolveDefaultUploadSigner();
+  const playbackSigner = options?.playbackSigner ?? resolveDefaultPlaybackSigner();
   const corsAllowedOrigins = resolveCorsAllowedOrigins();
   const defaultDatabase =
     options?.mediaLookup && options?.memoryRepository ? null : createDefaultDatabase();
@@ -1905,15 +1991,24 @@ export function buildApp(options?: BuildAppOptions) {
     reply.header("x-request-id", request.id);
 
     const path = normalizePath(request.url);
-    const allowOrigin = resolveCorsAllowOrigin(request.headers.origin, corsAllowedOrigins);
+    const browserOrigin = resolveBrowserOriginForCors(request.headers);
+    const matchedOrigin = resolveCorsAllowOrigin(browserOrigin.value, corsAllowedOrigins);
+    const allowOrigin =
+      matchedOrigin ??
+      (shouldAllowAnyCorsOriginForDevMediaSink(request.method, path) ? "*" : null);
     if (allowOrigin) {
       reply.header("Access-Control-Allow-Origin", allowOrigin);
-      reply.header("Vary", "Origin");
+      if (allowOrigin !== "*") {
+        reply.header(
+          "Vary",
+          browserOrigin.usedRefererFallback ? "Origin, Referer" : "Origin",
+        );
+      }
     }
 
     if (request.method === "OPTIONS") {
       if (allowOrigin) {
-        reply.header("Access-Control-Allow-Methods", "GET, HEAD, POST, PATCH, DELETE, OPTIONS");
+        reply.header("Access-Control-Allow-Methods", "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS");
         reply.header(
           "Access-Control-Allow-Headers",
           "authorization, content-type, accept, idempotency-key, x-request-id",

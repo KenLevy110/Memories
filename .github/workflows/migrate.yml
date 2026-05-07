@@ -107,8 +107,12 @@ jobs:
             echo "Unable to parse host from DATABASE_URL_PRODUCTION."
             exit 1
           fi
-          if [[ "${db_host}" == *.railway.internal ]]; then
-            echo "::error::DATABASE_URL_PRODUCTION points to Railway private host (${db_host}), which is not reachable from GitHub-hosted runners. Use Railway's public connection URL for GitHub Actions migrations."
+          # GitHub-hosted runners cannot reach Cloud SQL private IPs directly.
+          # For Cloud SQL, set DATABASE_URL_PRODUCTION to the public IP form
+          # (or front it with the Cloud SQL Auth Proxy via a side step) so
+          # this job can connect.
+          if [[ "${db_host}" == *.internal || "${db_host}" == 10.* || "${db_host}" == 192.168.* ]]; then
+            echo "::error::DATABASE_URL_PRODUCTION host (${db_host}) looks private and is not reachable from GitHub-hosted runners. Use a public connection URL or run the Cloud SQL Auth Proxy in this job."
             exit 1
           fi
 

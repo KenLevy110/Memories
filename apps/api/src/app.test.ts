@@ -105,6 +105,90 @@ describe("api auth shell", () => {
     expect(res.headers["access-control-allow-origin"]).toBe("http://localhost:5999");
   });
 
+  it("reflects RFC1918 LAN Origin for upload sink CORS when NODE_ENV is not production", async () => {
+    const practiceId = "11111111-1111-4111-8111-111111111111";
+    const mediaId = "22222222-2222-4222-8222-222222222222";
+    const res = await app.inject({
+      method: "OPTIONS",
+      url: `/${practiceId}/uploads/images/${mediaId}`,
+      headers: {
+        origin: "http://192.168.55.44:5173",
+        "access-control-request-method": "PUT",
+        "access-control-request-headers": "content-type",
+        "access-control-request-private-network": "true",
+      },
+    });
+    expect(res.statusCode).toBe(204);
+    expect(res.headers["access-control-allow-origin"]).toBe("http://192.168.55.44:5173");
+    expect(res.headers["access-control-allow-private-network"]).toBe("true");
+  });
+
+  it("reflects CORS Allow-Origin from Referer when Origin is omitted (upload sink preflight)", async () => {
+    const practiceId = "11111111-1111-4111-8111-111111111111";
+    const mediaId = "22222222-2222-4222-8222-222222222222";
+    const res = await app.inject({
+      method: "OPTIONS",
+      url: `/${practiceId}/uploads/images/${mediaId}`,
+      headers: {
+        referer: "http://localhost:5173/clients/00000000-0000-4000-8000-000000000001/capture",
+        "access-control-request-method": "PUT",
+        "access-control-request-headers": "content-type",
+      },
+    });
+    expect(res.statusCode).toBe(204);
+    expect(res.headers["access-control-allow-origin"]).toBe("http://localhost:5173");
+    expect(res.headers.vary?.toLowerCase()).toContain("referer");
+  });
+
+  it("reflects CORS Allow-Origin from Referer on upload sink PUT when Origin is omitted", async () => {
+    const practiceId = "11111111-1111-4111-8111-111111111111";
+    const mediaId = "22222222-2222-4222-8222-222222222222";
+    const res = await app.inject({
+      method: "PUT",
+      url: `/${practiceId}/uploads/images/${mediaId}`,
+      headers: {
+        "content-type": "image/jpeg",
+        referer: "http://localhost:5173/",
+      },
+      payload: Buffer.from([0xff, 0xd8, 0xff]),
+    });
+    expect(res.statusCode).toBe(204);
+    expect(res.headers["access-control-allow-origin"]).toBe("http://localhost:5173");
+    expect(res.headers["access-control-allow-private-network"]).toBe("true");
+  });
+
+  it("allows wildcard CORS on upload sink preflight when Origin and Referer are missing", async () => {
+    const practiceId = "11111111-1111-4111-8111-111111111111";
+    const mediaId = "22222222-2222-4222-8222-222222222222";
+    const res = await app.inject({
+      method: "OPTIONS",
+      url: `/${practiceId}/uploads/images/${mediaId}`,
+      headers: {
+        "access-control-request-method": "PUT",
+        "access-control-request-headers": "content-type",
+      },
+    });
+    expect(res.statusCode).toBe(204);
+    expect(res.headers["access-control-allow-origin"]).toBe("*");
+    expect(res.headers["access-control-allow-methods"]).toMatch(/PUT/);
+  });
+
+  it("allows wildcard CORS on upload sink PUT when Origin and Referer are missing", async () => {
+    const practiceId = "11111111-1111-4111-8111-111111111111";
+    const mediaId = "22222222-2222-4222-8222-222222222222";
+    const res = await app.inject({
+      method: "PUT",
+      url: `/${practiceId}/uploads/images/${mediaId}`,
+      headers: {
+        "content-type": "image/jpeg",
+      },
+      payload: Buffer.from([0xff, 0xd8, 0xff]),
+    });
+    expect(res.statusCode).toBe(204);
+    expect(res.headers["access-control-allow-origin"]).toBe("*");
+    expect(res.headers["access-control-allow-private-network"]).toBe("true");
+  });
+
   it("responds to CORS preflight for an allowed web origin without a bearer token", async () => {
     const res = await app.inject({
       method: "OPTIONS",

@@ -23,11 +23,6 @@ import {
   memoryMedia,
   memoryTranscripts,
 } from "./db/schema.js";
-import {
-  createGcsPlaybackSigner,
-  createGcsUploadSigner,
-} from "./storage/gcsSigner.js";
-
 type DrizzleDb = ReturnType<typeof drizzle>;
 type MemoryDetailExecutor = Pick<DrizzleDb, "select">;
 
@@ -774,20 +769,42 @@ function resolveGcsBucket(): string | null {
   return raw && raw.length > 0 ? raw : null;
 }
 
+/** Load GCS signers only when `GCS_BUCKET` is set so local `npm run dev` does not require `@google-cloud/storage`. */
 function resolveDefaultUploadSigner(): UploadSigner {
   const bucket = resolveGcsBucket();
-  if (bucket) {
-    return createGcsUploadSigner({ bucket });
+  if (!bucket) {
+    return createDefaultUploadSigner();
   }
-  return createDefaultUploadSigner();
+  let inner: UploadSigner | null = null;
+  return async (input) => {
+    if (!inner) {
+      const { createGcsUploadSigner } = await import("./storage/gcsSigner.js");
+      inner = createGcsUploadSigner({ bucket });
+    }
+    return inner(input);
+  };
 }
 
 function resolveDefaultPlaybackSigner(): PlaybackSigner {
   const bucket = resolveGcsBucket();
-  if (bucket) {
-    return createGcsPlaybackSigner({ bucket });
+  if (!bucket) {
+    return createDefaultPlaybackSigner();
   }
-  return createDefaultPlaybackSigner();
+  type GcsPlaybackCore = (input: {
+    storageKey: string;
+    mimeType: string;
+  }) => Promise<{ readUrl: string; expiresAt: string }>;
+  let inner: GcsPlaybackCore | null = null;
+  return async (mediaRecord) => {
+    if (!inner) {
+      const { createGcsPlaybackSigner } = await import("./storage/gcsSigner.js");
+      inner = createGcsPlaybackSigner({ bucket });
+    }
+    return inner({
+      storageKey: mediaRecord.storageKey,
+      mimeType: mediaRecord.mimeType,
+    });
+  };
 }
 
 function createDefaultUploadSigner(): UploadSigner {

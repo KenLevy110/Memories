@@ -77,10 +77,14 @@ gcloud artifacts repositories describe "${ARTIFACT_REPO}" \
     --location="${REGION}" \
     --description="Memories container images"
 
-echo "Creating Cloud SQL Postgres instance (db-f1-micro, single zone)…"
+echo "Creating Cloud SQL Postgres instance (db-f1-micro, ENTERPRISE edition, single zone)…"
+# --edition=ENTERPRISE is required because new Postgres instances default to
+# ENTERPRISE_PLUS, which rejects db-f1-micro and forces db-perf-optimized-N-*
+# tiers (much more expensive). Stay on ENTERPRISE for the MVP-cost shape.
 gcloud sql instances describe "${SQL_INSTANCE}" >/dev/null 2>&1 || \
   gcloud sql instances create "${SQL_INSTANCE}" \
     --database-version=POSTGRES_16 \
+    --edition=ENTERPRISE \
     --tier=db-f1-micro \
     --region="${REGION}" \
     --availability-type=ZONAL \

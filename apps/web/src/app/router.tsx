@@ -37,6 +37,79 @@ function isCaptureStep(value: string): value is CaptureStep {
   return captureSteps.includes(value as CaptureStep);
 }
 
+const ROOM_SUGGESTIONS = ["Living room", "Kitchen", "Bedroom", "Dining room", "Office", "Hallway"] as const;
+
+function formatClientLabel(clientId: string): string {
+  if (clientId.length <= 16) {
+    return clientId;
+  }
+  return `${clientId.slice(0, 8)}…${clientId.slice(-4)}`;
+}
+
+function captureStepProgress(step: CaptureStep): { stepNum: number; label: string; pct: number } | null {
+  switch (step) {
+    case "photo":
+      return { stepNum: 1, label: "Photograph", pct: 25 };
+    case "meta":
+      return { stepNum: 2, label: "Name and room", pct: 50 };
+    case "prompt":
+      return { stepNum: 3, label: "Story", pct: 75 };
+    case "record":
+      return { stepNum: 3, label: "Recording", pct: 75 };
+    case "review":
+      return { stepNum: 4, label: "Review and save", pct: 100 };
+    default:
+      return null;
+  }
+}
+
+function previousCaptureStep(current: CaptureStep): CaptureStep | null {
+  switch (current) {
+    case "meta":
+      return "photo";
+    case "prompt":
+      return "meta";
+    case "record":
+      return "prompt";
+    case "review":
+      return "record";
+    default:
+      return null;
+  }
+}
+
+function ComingSoonBanner({ message }: { message: string | null }) {
+  if (!message) {
+    return null;
+  }
+  return (
+    <p role="status" aria-live="polite" className="coming-soon-banner">
+      {message}
+    </p>
+  );
+}
+
+function useComingSoonNotice(durationMs = 4800): {
+  comingSoonMessage: string | null;
+  flashComingSoon: (detail: string) => void;
+} {
+  const [comingSoonMessage, setComingSoonMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!comingSoonMessage) {
+      return;
+    }
+    const id = window.setTimeout(() => setComingSoonMessage(null), durationMs);
+    return () => window.clearTimeout(id);
+  }, [comingSoonMessage, durationMs]);
+
+  const flashComingSoon = (detail: string) => {
+    setComingSoonMessage(`Coming Soon — ${detail}`);
+  };
+
+  return { comingSoonMessage, flashComingSoon };
+}
+
 function AppShell() {
   const [tokenInput, setTokenInput] = useState(getDevBearerToken() ?? "");
   const [tokenStatus, setTokenStatus] = useState<string | null>(null);
@@ -204,6 +277,7 @@ function MemoriesListPage() {
 function MemoryDetailPage() {
   const { clientId, memoryId } = memoryDetailRoute.useParams();
   const [playbackByMediaId, setPlaybackByMediaId] = useState<Record<string, string>>({});
+  const { comingSoonMessage, flashComingSoon } = useComingSoonNotice();
 
   const detailQuery = useQuery({
     queryKey: ["memory", clientId, memoryId],
@@ -222,6 +296,7 @@ function MemoryDetailPage() {
 
   return (
     <section className="panel">
+      <ComingSoonBanner message={comingSoonMessage} />
       <div className="panel-header">
         <h2>Memory detail</h2>
         <Link to="/clients/$clientId/memories" params={{ clientId }}>
@@ -238,7 +313,30 @@ function MemoryDetailPage() {
         <div className="memory-detail">
           <h3>{detailQuery.data.memory.title}</h3>
           <p>{detailQuery.data.memory.room ?? "No room provided"}</p>
-          <p>{detailQuery.data.memory.body ?? "No transcript body saved yet."}</p>
+          <p>{detailQuery.data.memory.body ?? "No description saved yet."}</p>
+
+          <section className="detail-transcript-placeholder" aria-labelledby="detail-transcript-heading">
+            <h4 id="detail-transcript-heading">Transcript</h4>
+            <p className="hint">
+              Automatic captions from recorded audio will appear here once transcription is enabled.
+            </p>
+            <button type="button" className="button-secondary" onClick={() => flashComingSoon("Transcript refresh")}>
+              Refresh transcript
+            </button>
+          </section>
+
+          <section className="detail-tags-placeholder" aria-labelledby="detail-tags-heading">
+            <h4 id="detail-tags-heading">Tags</h4>
+            <p className="hint">Curator tags.</p>
+            <div className="row wrap capture-placeholder-actions">
+              <button type="button" className="button-secondary" onClick={() => flashComingSoon("Add tag")}>
+                Add tag
+              </button>
+              <button type="button" className="button-secondary" onClick={() => flashComingSoon("Suggested tags (AI)")}>
+                Suggest tags
+              </button>
+            </div>
+          </section>
 
           <h4>Media</h4>
           <ul className="memory-list">
@@ -284,6 +382,7 @@ function CapturePage() {
   const queryClient = useQueryClient();
   const { clientId } = captureRoute.useParams();
   const { step } = captureRoute.useSearch();
+  const { comingSoonMessage, flashComingSoon } = useComingSoonNotice();
 
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [title, setTitle] = useState("");
@@ -522,26 +621,65 @@ function CapturePage() {
     }
   }
 
+  const progress = captureStepProgress(step);
+  const clientLabel = formatClientLabel(clientId);
+
   return (
-    <section className="panel">
-      <div className="panel-header">
-        <h2>Capture flow</h2>
-        <Link to="/clients/$clientId/memories" params={{ clientId }}>
-          Back to list
-        </Link>
-      </div>
-      <p>Facilitating for {clientId}</p>
-      <p className="hint">Step: {step}</p>
+    <section className="panel capture-panel">
+      <ComingSoonBanner message={comingSoonMessage} />
+
+      <header className="capture-shell-header">
+        <div className="capture-shell-top">
+          <button
+            type="button"
+            className="button-secondary capture-shell-back"
+            onClick={() => {
+              const prev = previousCaptureStep(step);
+              if (prev) {
+                goToStep(prev);
+              } else {
+                void navigate({ to: "/clients/$clientId/memories", params: { clientId } });
+              }
+            }}
+          >
+            Back
+          </button>
+          <h2 className="capture-shell-title">Capture Memory</h2>
+          <button
+            type="button"
+            className="button-secondary capture-shell-close"
+            onClick={() => {
+              void navigate({ to: "/clients/$clientId/memories", params: { clientId } });
+            }}
+          >
+            Close
+          </button>
+        </div>
+        <p className="capture-context-bar">Facilitating for {clientLabel}</p>
+        {progress ? (
+          <>
+            <p className="capture-step-heading">
+              Step {progress.stepNum} of 4 · {progress.label}
+            </p>
+            <div className="capture-progress-track" aria-hidden="true">
+              <div className="capture-progress-fill" style={{ width: `${progress.pct}%` }} />
+            </div>
+          </>
+        ) : null}
+      </header>
 
       {!draftLoaded ? <p>Loading draft...</p> : null}
 
       {step === "photo" ? (
         <div className="step-card">
-          <h3>Step 1 of 5 · Photograph</h3>
+          <p className="capture-lead">Let&apos;s capture something meaningful in the home.</p>
+          <label htmlFor="photoFileInput">Photo</label>
           <input
+            id="photoFileInput"
             aria-label="Photo"
             type="file"
             accept="image/*"
+            capture="environment"
             onChange={(event) => {
               const file = event.currentTarget.files?.[0] ?? null;
               setImageBlob(file);
@@ -550,6 +688,14 @@ function CapturePage() {
               });
             }}
           />
+          <div className="row capture-placeholder-actions">
+            <button type="button" className="button-secondary" onClick={() => flashComingSoon("Choose from Library")}>
+              Choose from Library
+            </button>
+            <button type="button" className="button-secondary" onClick={() => flashComingSoon("Add another photo")}>
+              Add another photo
+            </button>
+          </div>
           {imagePreviewUrl ? <img className="preview" src={imagePreviewUrl} alt="Photo preview" /> : null}
           <button type="button" disabled={!imageBlob} onClick={() => goToStep("meta")}>
             Continue
@@ -559,17 +705,42 @@ function CapturePage() {
 
       {step === "meta" ? (
         <div className="step-card">
-          <h3>Step 2 of 5 · Name and room</h3>
-          <label htmlFor="titleInput">Object title</label>
+          {imagePreviewUrl ? (
+            <div className="capture-meta-thumb">
+              <img className="preview" src={imagePreviewUrl} alt="" />
+              <button type="button" className="button-secondary" onClick={() => goToStep("photo")}>
+                Retake photo
+              </button>
+            </div>
+          ) : null}
+          <label htmlFor="titleInput">Object name</label>
           <input
             id="titleInput"
+            aria-label="Object title"
             value={title}
             maxLength={120}
             onChange={(event) => setTitle(event.target.value)}
           />
-          <label htmlFor="roomInput">Room</label>
+          <p className="hint" id="roomChipsHint">
+            Tap a suggestion or enter a custom room.
+          </p>
+          <div className="chip-row" role="group" aria-labelledby="roomChipsHint">
+            {ROOM_SUGGESTIONS.map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                className={`chip ${room === preset ? "chip-selected" : ""}`}
+                aria-pressed={room === preset}
+                onClick={() => setRoom(preset)}
+              >
+                {preset}
+              </button>
+            ))}
+          </div>
+          <label htmlFor="roomInput">Room (custom)</label>
           <input
             id="roomInput"
+            aria-label="Room"
             value={room}
             maxLength={80}
             onChange={(event) => setRoom(event.target.value)}
@@ -587,10 +758,28 @@ function CapturePage() {
 
       {step === "prompt" ? (
         <div className="step-card">
-          <h3>Step 3 of 5 · Story prompt</h3>
-          <p>
-            Ask: “What story comes to mind when you look at this object in {room.trim() || "this room"}?”
-          </p>
+          <div className="memory-summary-card">
+            <strong>{title.trim() || "Untitled object"}</strong>
+            <span className="memory-summary-room">{room.trim() || "Room not set"}</span>
+          </div>
+          <div className="guide-prompt-card">
+            <p className="guide-prompt-label">Ohana Guide suggests</p>
+            <p>
+              Ask: &ldquo;What story comes to mind when you look at this object
+              {room.trim() ? ` in ${room.trim()}` : ""}?&rdquo;
+            </p>
+          </div>
+          <div className="row capture-placeholder-actions wrap">
+            <button type="button" className="button-secondary" onClick={() => flashComingSoon("Suggested prompt (AI)")}>
+              Refresh suggestion
+            </button>
+            <button type="button" className="button-secondary" onClick={() => flashComingSoon("Record video")}>
+              Record video
+            </button>
+            <button type="button" className="button-secondary" onClick={() => flashComingSoon("Type or transcribe")}>
+              Type or transcribe
+            </button>
+          </div>
           <div className="row">
             <button type="button" onClick={() => goToStep("meta")}>
               Back
@@ -604,9 +793,19 @@ function CapturePage() {
 
       {step === "record" ? (
         <div className="step-card">
-          <h3>Step 4 of 5 · Recording</h3>
-          <p>Use MediaRecorder when available. A file picker fallback is available for unsupported environments.</p>
-          <div className="row">
+          <div className="memory-summary-card memory-summary-compact">
+            <strong>{title.trim() || "Untitled object"}</strong>
+            <span>{room.trim() || "Room not set"}</span>
+          </div>
+          <div className="guide-prompt-card guide-prompt-quiet">
+            <p className="guide-prompt-label">Story prompt</p>
+            <p>
+              &ldquo;What story comes to mind when you look at this object
+              {room.trim() ? ` in ${room.trim()}` : ""}?&rdquo;
+            </p>
+          </div>
+          <p className="hint">Use the microphone to record. Unsupported browsers can use the hidden test fallback.</p>
+          <div className="row capture-recorder-actions">
             {isRecording ? (
               <button type="button" onClick={stopRecording}>
                 Stop recording
@@ -617,10 +816,24 @@ function CapturePage() {
               </button>
             )}
           </div>
-          <label htmlFor="audioFileInput">Fallback audio file</label>
+          <div className="row capture-placeholder-actions wrap">
+            <button type="button" className="button-secondary" onClick={() => flashComingSoon("Upload audio from library")}>
+              Upload audio from library
+            </button>
+            <button type="button" className="button-secondary" onClick={() => flashComingSoon("Record video")}>
+              Record video
+            </button>
+            <button type="button" className="button-secondary" onClick={() => flashComingSoon("Type or transcribe")}>
+              Type or transcribe
+            </button>
+          </div>
+          <label htmlFor="audioFileInput" className="visually-hidden">
+            Audio fallback
+          </label>
           <input
             id="audioFileInput"
             aria-label="Audio fallback"
+            className="visually-hidden"
             type="file"
             accept="audio/*"
             onChange={(event) => {
@@ -646,37 +859,52 @@ function CapturePage() {
 
       {step === "review" ? (
         <div className="step-card">
-          <h3>Step 5 of 5 · Review and save</h3>
-          <p>Title: {title || "(missing)"}</p>
-          <p>Room: {room || "(optional)"}</p>
-          <p>Image: {imageBlob ? `${imageBlob.size.toLocaleString()} bytes` : "missing"}</p>
+          <p className="capture-review-summary">
+            <strong>{title || "(missing title)"}</strong>
+            <span>{room || "Room optional"}</span>
+          </p>
+          <p>Photo: {imageBlob ? `${imageBlob.size.toLocaleString()} bytes` : "missing"}</p>
           <p>Audio: {audioBlob ? `${audioBlob.size.toLocaleString()} bytes` : "missing"}</p>
+          {audioPreviewUrl ? (
+            <audio aria-label="Review recording" controls src={audioPreviewUrl} />
+          ) : null}
+          <div className="review-tags-placeholder">
+            <p className="hint">Optional tags</p>
+            <div className="row capture-placeholder-actions wrap">
+              <button type="button" className="button-secondary" onClick={() => flashComingSoon("Tags")}>
+                Add tag
+              </button>
+              <button type="button" className="button-secondary" onClick={() => flashComingSoon("Suggested tags (AI)")}>
+                Suggest tags
+              </button>
+            </div>
+          </div>
           {saveError ? <p role="alert">{saveError}</p> : null}
           {saveMessage ? <p>{saveMessage}</p> : null}
-          <div className="row">
+          <div className="row wrap">
             <button type="button" onClick={() => goToStep("record")}>
-              Back
+              Re-record
             </button>
             <button type="button" disabled={isSaving} onClick={() => void saveMemory()}>
-              {isSaving ? "Saving..." : "Save memory"}
+              {isSaving ? "Saving..." : `Save to ${clientLabel}'s Archive`}
             </button>
           </div>
         </div>
       ) : null}
 
       {step === "done" ? (
-        <div className="step-card">
-          <h3>Memory saved</h3>
-          <p>{saveMessage ?? "Save completed. Replay-safe idempotency header was used."}</p>
+        <div className="step-card capture-done-card">
+          <h3 className="capture-done-title">Memory saved</h3>
+          <p>{saveMessage ?? "Saved to the archive. Replay-safe idempotency header was used."}</p>
           {lastSavedMemoryId ? (
             <Link
               to="/clients/$clientId/memories/$memoryId"
               params={{ clientId, memoryId: lastSavedMemoryId }}
             >
-              View saved memory
+              View in Archive
             </Link>
           ) : null}
-          <div className="row">
+          <div className="row wrap">
             <button
               type="button"
               onClick={async () => {

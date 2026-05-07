@@ -7,7 +7,7 @@
 | **Title** | Memories — wireframes |
 | **Version** | 1.0 |
 | **Edition** | **v1** — filename `design-wireframe-v1.md` (use `-v2.md` etc. for major rewrites) |
-| **Date** | 2026-04-22 |
+| **Date** | 2026-05-07 |
 | **Author** | Draft (from PRD v1.0 + TDD v1.0) |
 | **Fidelity** | Low-fi ASCII + state coverage; **hi-fi** in [memories-user-workflow-v1.md](memories-user-workflow-v1.md) |
 | **PRD** | [product-requirements-v1.md](product-requirements-v1.md) |
@@ -18,7 +18,7 @@
 
 ## Summary
 
-This doc adds **screens and states not covered** by the committed hi-fi screenshots: **empty memories list**, **upload failure**, **transcription failed**, and **offline / saving** banner behavior. The **happy-path capture flow** (MC1–MC6 + list ML1) is illustrated in **PNG form** in [memories-user-workflow-v1.md](memories-user-workflow-v1.md)—do not duplicate those layouts here; reference that file for visual design.
+This doc adds **screens and states not covered** by the committed hi-fi screenshots: **empty memories list**, **upload failure**, **transcription failed**, and **offline / saving** banner behavior. The **happy-path capture flow** (MC1–MC6 + list ML1) is illustrated in **PNG form** in [memories-user-workflow-v1.md](memories-user-workflow-v1.md)—do not duplicate those layouts here; reference that file for visual design. Optional **Stage 0.5.1-demo** builds (**[development-plan-v1.md](development-plan-v1.md)** **T25**) align capture chrome with that workflow reference while stubbing deferred capabilities as **Coming Soon**.
 
 **Principles:** **Mobile-first**, **NFR-012** (elder-friendly: few choices, plain language, large targets), trace screens to **FR** where noted.
 

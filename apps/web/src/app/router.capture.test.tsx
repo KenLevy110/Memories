@@ -146,7 +146,7 @@ describe("capture flow smoke", () => {
     await user.upload(audioInput, new File(["aud"], "clip.webm", { type: "audio/webm" }));
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
-    await user.click(screen.getByRole("button", { name: "Save memory" }));
+    await user.click(screen.getByRole("button", { name: /Save to .+'s Archive/ }));
 
     await screen.findByRole("heading", { name: "Memory saved" });
 
@@ -178,5 +178,28 @@ describe("capture flow smoke", () => {
       expect(finalizeCall?.headers.get("idempotency-key")).toBeTruthy();
       expect(finalizeCall?.headers.get("authorization")).toBe("Bearer token-for-capture-test");
     });
+  });
+
+  it("shows Coming Soon when a deferred capture control is used", async () => {
+    window.localStorage.setItem("memories.devBearerToken", "token-for-capture-test");
+    window.history.pushState({}, "", "/clients/00000000-0000-4000-8000-000000000001/capture?step=photo");
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
+    const router = createAppRouter();
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    );
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Choose from Library" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Coming Soon — Choose from Library");
   });
 });

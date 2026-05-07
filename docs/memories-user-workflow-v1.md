@@ -7,8 +7,9 @@
 | **Purpose** | Single place for **capture → save → list** flow: screenshots, flow diagram, and low-fi layout notes. |
 | **Used by** | [product-requirements-v1.md](product-requirements-v1.md), [technical-design-v1.md](technical-design-v1.md), [design-wireframe-v1.md](design-wireframe-v1.md) |
 | **Screenshots** | `docs/assets/workflow-screenshots/*.png` (7 steps, committed to repo) |
-| **Last updated** | 2026-04-30 |
+| **Last updated** | 2026-05-07 |
 | **Routing (web)** | **TanStack Router**; capture = one path + **`?step=`** (see below); canonical detail + REST addendum in [technical-design-v1.md](technical-design-v1.md) §§3.1–3.2 |
+| **Stage alignment** | **Stage 0.5** ships a reduced capability slice (see [development-plan-v1.md](development-plan-v1.md) Section 4). **Stage 0.5.1-demo** (**T25**, tag **`v0.5.1-demo`**) targets **visual/workflow parity** for demos while keeping **0.5** finalize limits; controls for **0.6–1.0** features may appear as **Coming Soon** placeholders until those tickets land. Full functional parity with this doc follows **T15–T21**. |
 
 ---
 

@@ -6,7 +6,7 @@
 | --- | --- |
 | **Owner** | Engineering |
 | **Status** | Active |
-| **Last updated** | 2026-04-30 |
+| **Last updated** | 2026-05-07 |
 | **Template used** | Repository convention (implementation activity log) |
 | **Related docs** | [product-requirements-v1.md](product-requirements-v1.md); [technical-design-v1.md](technical-design-v1.md); [development-plan-v1.md](development-plan-v1.md); [development-plan.md](development-plan.md) (pointer); [adr/README.md](adr/README.md) |
 
@@ -35,6 +35,14 @@ Each entry should include:
 ---
 
 ## Entries
+
+### 2026-05-07 - Stage **0.5.1-demo** plan + capture UX (**T25**)
+
+- **Area:** Web, Docs
+- **Summary:** Documented optional milestone **`v0.5.1-demo`** in [development-plan-v1.md](development-plan-v1.md) (ticket **T25**, Prompt **T25**, rollout/matrix rows). Updated [memories-user-workflow-v1.md](memories-user-workflow-v1.md) and [design-wireframe-v1.md](design-wireframe-v1.md) for stage alignment. Web capture/detail: workflow-style shell (**Step 1–4**), facilitator bar, summary + Guide prompt cards, room chips, **Coming Soon** actions for deferred **T15–T21** surfaces; detail transcript/tags placeholders.
+- **Touched:** `apps/web/src/app/router.tsx`, `apps/web/src/index.css`, `apps/web/src/app/router.capture.test.tsx`, `docs/development-plan-v1.md`, `docs/memories-user-workflow-v1.md`, `docs/design-wireframe-v1.md`, `docs/implementation-log.md`
+- **Validation:** `npm run lint`, `npm run typecheck`, `npm run test`
+- **Follow-ups:** Replace **Coming Soon** controls as **T15–T21** land; keep **0.5** finalize limits until **T15**.
 
 ### 2026-04-30 - Observability baseline (`T13`) metric hooks + probe headers
 

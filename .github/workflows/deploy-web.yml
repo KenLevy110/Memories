@@ -6,6 +6,12 @@
 #   GCP_WIF_PROVIDER
 #   GCP_DEPLOY_SA
 #   API_URL                          public URL of the deployed API, e.g. https://memories-api-XXXX.a.run.app
+#   FIREBASE_WEB_API_KEY             Firebase web app config (public; still stored as a secret in Actions)
+#   FIREBASE_WEB_AUTH_DOMAIN
+#   FIREBASE_WEB_PROJECT_ID
+#   FIREBASE_WEB_STORAGE_BUCKET
+#   FIREBASE_WEB_MESSAGING_SENDER_ID
+#   FIREBASE_WEB_APP_ID
 
 name: Deploy Web (Firebase Hosting)
 
@@ -53,6 +59,12 @@ jobs:
       - name: Build web with production API URL
         env:
           VITE_API_URL: ${{ secrets.API_URL }}
+          VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_WEB_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_WEB_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_WEB_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_WEB_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.FIREBASE_WEB_APP_ID }}
         run: npm run build -w @memories/web
 
       - name: Deploy to Firebase Hosting

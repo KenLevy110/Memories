@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { finalizeMemory, getMemoryDetail, signReadPlayback, uploadSignedMedia } from "./api";
+import {
+  finalizeMemory,
+  getMemoryDetail,
+  registerFirebaseIdTokenProvider,
+  signReadPlayback,
+  uploadSignedMedia,
+} from "./api";
 
 function buildMemoryDetailResponse() {
   return {
@@ -24,6 +30,7 @@ describe("api client", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     window.localStorage.clear();
+    registerFirebaseIdTokenProvider(null);
   });
 
   it("sends idempotency and authorization headers on finalize", async () => {
@@ -55,6 +62,36 @@ describe("api client", () => {
     const headers = new Headers(init?.headers);
     expect(headers.get("idempotency-key")).toBe("idem-123");
     expect(headers.get("authorization")).toBe("Bearer token-for-tests");
+  });
+
+  it("prefers a registered Firebase id token provider over the dev bearer token", async () => {
+    window.localStorage.setItem("memories.devBearerToken", "dev-token");
+    registerFirebaseIdTokenProvider(async () => "firebase-token");
+
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(
+        new Response(JSON.stringify(buildMemoryDetailResponse()), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+
+    await finalizeMemory(
+      "22222222-2222-4222-8222-222222222222",
+      {
+        title: "Saved memory",
+        room: "Kitchen",
+        body: null,
+        media: [],
+      },
+      "idem-123",
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const init = fetchMock.mock.calls[0]?.[1];
+    const headers = new Headers(init?.headers);
+    expect(headers.get("authorization")).toBe("Bearer firebase-token");
   });
 
   it("uploads media bytes with signed PUT contract headers", async () => {

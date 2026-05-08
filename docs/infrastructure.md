@@ -34,6 +34,26 @@ The production deployment is provisioned with the idempotent script at [`infra/g
 - Auth for CI/CD -> **Workload Identity Federation** pool/provider scoped to this GitHub repo. The deploy SA (`memories-deploy`) is impersonated by Actions; no JSON keys are stored.
 - Transcription -> **Cloud Run Job** triggered by **Eventarc** on `object.finalize` for the audio prefix (added in a follow-up phase; SA `memories-transcribe` is provisioned by the bootstrap script and grants are pre-wired).
 
+### 3.1 Firebase Authentication (Google sign-in + API JWT)
+
+Use this when the Legacy web app is on **Firebase Hosting** and the API verifies **Firebase ID tokens** (same GCP project).
+
+1. **Console:** In [Firebase Console](https://console.firebase.google.com/) for the target project, open **Build → Authentication**, enable **Google** (and optionally Email link). Under **Settings → Authorized domains**, include your Hosting domain (for example `legacy-memories-prod.web.app`, `legacy-memories-prod.firebaseapp.com`, and later `app.theohanaway.com`).
+2. **API JWT secrets (Secret Manager):** Cloud Run should receive:
+   - `JWT_ISSUER` = `https://securetoken.google.com/<firebase_project_id>`
+   - `JWT_AUDIENCE` = `<firebase_project_id>` (same string as the Firebase / GCP project id)
+   - `JWT_JWKS_URI` = `https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com`  
+   After updating secrets, deploy a new Cloud Run revision (or otherwise restart) so the service picks up new values.
+3. **CORS on the API:** Set Cloud Run env `WEB_ORIGIN` to a comma-separated list of exact browser origins that call the API (include `https://<your-site>.web.app` and any custom domain). The API echoes `Access-Control-Allow-Origin` only for allowlisted origins in production.
+4. **Media bucket CORS:** Browser **PUT** uploads to **GCS signed URLs** require the bucket CORS config to list the same Hosting origins. Update [`infra/gcp/cors.json`](../infra/gcp/cors.json) if needed, then apply (example):  
+   `gcloud storage buckets update gs://<bucket> --cors-file=infra/gcp/cors.json`
+5. **Custom claims (v0.5 manual path):** The API expects custom JWT claims `practice_id`, `user_id`, `client_id` (or `client_ids`), and a **Guide** role for upload/finalize mutations (`GUIDE`, `GUIDE_PRIMARY`, or `GUIDE_SUPPORT`). Postgres stores `practice_id` and `actor_user_id` as **UUID** columns, so raw Firebase UIDs cannot be inserted as those values. The operator script derives stable UUIDs (UUID v5) from each Firebase UID and writes them as custom claims:
+   - From the repo root (after `npm install`):  
+     `npm run set-firebase-claims --workspace=@memories/api -- <firebase_user_uid> [--dry-run]`  
+   - Run with **Application Default Credentials** that can edit Firebase users (`gcloud auth application-default login` as a project admin, or a service account with `roles/firebaseauth.admin`). After writing claims, the user must **obtain a fresh ID token** (sign out and back in, or wait for refresh).
+6. **Web build:** GitHub Actions **Deploy Web** injects `VITE_FIREBASE_*` from repository secrets (see [`.github/workflows/deploy-web.yml`](../.github/workflows/deploy-web.yml)). Local: copy web config from Firebase Console into the repo root `.env` (see [`.env.example`](../.env.example)).
+7. **Smoke:** Sign in on the live site → open the **client id** from the `client_id` claim (home page fills it after sign-in) → capture photo + audio → confirm list, detail, **image** “Load image preview”, and audio playback.
+
 Required GitHub Actions secrets (the bootstrap script prints these at the end):
 
 - `GCP_PROJECT_ID`
@@ -46,6 +66,7 @@ Required GitHub Actions secrets (the bootstrap script prints these at the end):
 - `GCP_MEDIA_BUCKET`
 - `GCP_SQL_INSTANCE_CONNECTION`
 - `API_URL` (public Cloud Run URL, used to inject `VITE_API_URL` into the web build)
+- `FIREBASE_WEB_API_KEY`, `FIREBASE_WEB_AUTH_DOMAIN`, `FIREBASE_WEB_PROJECT_ID`, `FIREBASE_WEB_STORAGE_BUCKET`, `FIREBASE_WEB_MESSAGING_SENDER_ID`, `FIREBASE_WEB_APP_ID` (Firebase web SDK config for the Hosting build; see **section 3.1**)
 - `DATABASE_URL_PRODUCTION` (used by [`migrate.yml`](../.github/workflows/migrate.yml); a public-IP or proxy-fronted form so GitHub-hosted runners can reach Cloud SQL)
 - `ENABLE_AUTO_PROD_MIGRATE` set to `true` only when ready for automatic migrations on `main`
 
@@ -106,7 +127,7 @@ Keep these deferred until production migration cadence is stable:
 
 | Date | Notes |
 | --- | --- |
-| 2026-05-07 | Switched production target from Railway to Google Cloud (Cloud Run + Cloud SQL `db-f1-micro` + Cloud Storage + Firebase Hosting), single region `us-west1`. Added [`infra/gcp/`](../infra/gcp/) bootstrap + cors + README, [`apps/api/Dockerfile`](../apps/api/Dockerfile), [`apps/web/firebase.json`](../apps/web/firebase.json), and the `deploy-api.yml` / `deploy-web.yml` workflows wired through Workload Identity Federation. |
+| 2026-05-07 | Switched production target to Google Cloud (`us-west1`): Cloud Run, Cloud SQL `db-f1-micro`, GCS, Firebase Hosting, WIF deploy workflows, and [`infra/gcp/`](../infra/gcp/). Added **section 3.1 Firebase Authentication** (JWT issuer/audience/JWKS, `WEB_ORIGIN`, bucket CORS, `npm run set-firebase-claims`, GitHub `FIREBASE_WEB_*` secrets). Expanded [`infra/gcp/cors.json`](../infra/gcp/cors.json) with Legacy Hosting origins. |
 | 2026-04-30 | Tuned for Railway production-only mode: documented `ENABLE_AUTO_PROD_MIGRATE`, manual-first then automatic `main` migrations, and removed temporary staging dependency from checklist. |
 | 2026-04-30 | Added explicit do-now checklist + production DB migration readiness runbook (staging gate, ownership, rollback, and evidence logging). |
 | 2026-04-30 | Aligned with Ohana `cursor-template` CI/migrate docs; Memories-specific providers and `@memories/api` defaults. |

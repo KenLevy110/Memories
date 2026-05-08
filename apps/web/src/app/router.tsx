@@ -9,16 +9,19 @@ import {
   createRouter,
   useNavigate,
 } from "@tanstack/react-router";
-import { getMemories, getMemoryDetail, signReadPlayback } from "../lib/api";
+import { LoginPage } from "./LoginPage";
 import {
   ApiClientError,
   clearDevBearerToken,
   finalizeMemory,
   getDevBearerToken,
+  getMemories,
+  getMemoryDetail,
   isDevTokenInputEnabled,
   setDevBearerToken,
   signAudioUpload,
   signImageUpload,
+  signReadPlayback,
   uploadSignedMedia,
   type FinalizeMemoryRequest,
 } from "../lib/api";
@@ -30,6 +33,7 @@ import {
   saveCaptureDraft,
   type CaptureStep,
 } from "../lib/idb";
+import { useFirebaseSession } from "../lib/useFirebaseSession";
 
 const captureSteps: CaptureStep[] = ["photo", "meta", "prompt", "record", "review", "done"];
 
@@ -115,6 +119,8 @@ function AppShell() {
   const [tokenStatus, setTokenStatus] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const showDevTokenInput = isDevTokenInputEnabled();
+  const { configured: firebaseConfigured, user: firebaseUser, signOut: firebaseSignOut } =
+    useFirebaseSession();
 
   useEffect(() => {
     const runQueue = () => {
@@ -154,25 +160,49 @@ function AppShell() {
           <h1>Legacy memories</h1>
           <p>Facilitator flow: list, detail playback, capture, and queued finalize retry.</p>
         </div>
-        {showDevTokenInput ? (
-          <div className="token-controls">
-            <label htmlFor="devToken">Dev bearer token</label>
-            <textarea
-              id="devToken"
-              rows={3}
-              value={tokenInput}
-              onChange={(event) => {
-                setTokenInput(event.target.value);
-                setTokenStatus(null);
-              }}
-              placeholder="Paste token from /dev/token"
-            />
-            <button type="button" onClick={onSaveToken}>
-              Save token
-            </button>
-            {tokenStatus ? <span className="hint">{tokenStatus}</span> : null}
-          </div>
-        ) : null}
+        <div className="header-actions">
+          {firebaseConfigured ? (
+            <div className="firebase-session-controls">
+              {firebaseUser ? (
+                <>
+                  <span className="hint">Signed in</span>
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    onClick={() => {
+                      void firebaseSignOut();
+                    }}
+                  >
+                    Sign out
+                  </button>
+                </>
+              ) : (
+                <Link className="button-link" to="/login">
+                  Sign in
+                </Link>
+              )}
+            </div>
+          ) : null}
+          {showDevTokenInput ? (
+            <div className="token-controls">
+              <label htmlFor="devToken">Dev bearer token</label>
+              <textarea
+                id="devToken"
+                rows={3}
+                value={tokenInput}
+                onChange={(event) => {
+                  setTokenInput(event.target.value);
+                  setTokenStatus(null);
+                }}
+                placeholder="Paste token from /dev/token"
+              />
+              <button type="button" onClick={onSaveToken}>
+                Save token
+              </button>
+              {tokenStatus ? <span className="hint">{tokenStatus}</span> : null}
+            </div>
+          ) : null}
+        </div>
       </header>
       <main className="app-main">
         <Outlet />
@@ -183,11 +213,28 @@ function AppShell() {
 
 function HomePage() {
   const navigate = useNavigate();
+  const { configured: firebaseConfigured, user: firebaseUser, loading, defaultClientId } =
+    useFirebaseSession();
   const [clientId, setClientId] = useState("00000000-0000-4000-8000-000000000001");
+
+  useEffect(() => {
+    if (defaultClientId) {
+      setClientId(defaultClientId);
+    }
+  }, [defaultClientId]);
 
   return (
     <section className="panel">
       <h2>Open a client workspace</h2>
+      {firebaseConfigured && loading ? <p>Checking sign-in…</p> : null}
+      {firebaseConfigured && !loading && !firebaseUser ? (
+        <p>
+          <Link className="button-link" to="/login">
+            Sign in with Google
+          </Link>{" "}
+          to load your workspace, or continue with a manual client id below if you are using a dev token.
+        </p>
+      ) : null}
       <p>Enter the target client id and continue to the memories list route.</p>
       <label htmlFor="clientIdInput">Client id</label>
       <input
@@ -345,6 +392,26 @@ function MemoryDetailPage() {
                 <span>
                   {mediaItem.type} · {mediaItem.mime_type} · {mediaItem.byte_size.toLocaleString()} bytes
                 </span>
+                {mediaItem.type === "image" ? (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        signReadMutation.mutate(mediaItem.media_id);
+                      }}
+                      disabled={signReadMutation.isPending}
+                    >
+                      Load image preview
+                    </button>
+                    {playbackByMediaId[mediaItem.media_id] ? (
+                      <img
+                        className="detail-image-preview"
+                        src={playbackByMediaId[mediaItem.media_id]}
+                        alt={`Memory image ${mediaItem.media_id}`}
+                      />
+                    ) : null}
+                  </div>
+                ) : null}
                 {mediaItem.type === "audio" ? (
                   <div>
                     <button
@@ -963,7 +1030,19 @@ const captureRoute = createRoute({
   component: CapturePage,
 });
 
-const routeTree = rootRoute.addChildren([homeRoute, memoriesRoute, memoryDetailRoute, captureRoute]);
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/login",
+  component: LoginPage,
+});
+
+const routeTree = rootRoute.addChildren([
+  homeRoute,
+  loginRoute,
+  memoriesRoute,
+  memoryDetailRoute,
+  captureRoute,
+]);
 
 export function createAppRouter() {
   return createRouter({

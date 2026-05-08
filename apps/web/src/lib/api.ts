@@ -8,6 +8,13 @@ import {
 
 const devTokenStorageKey = "memories.devBearerToken";
 
+type FirebaseIdTokenProvider = () => Promise<string | null>;
+let firebaseIdTokenProvider: FirebaseIdTokenProvider | null = null;
+
+export function registerFirebaseIdTokenProvider(provider: FirebaseIdTokenProvider | null): void {
+  firebaseIdTokenProvider = provider;
+}
+
 const apiBase =
   import.meta.env.VITE_API_URL?.trim().replace(/\/$/, "") ?? "http://localhost:3000";
 const devTokenInputEnabled =
@@ -74,6 +81,20 @@ function normalizeToken(rawToken: string | null | undefined): string | null {
   }
   const trimmed = rawToken.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+async function resolveBearerToken(): Promise<string | null> {
+  if (firebaseIdTokenProvider) {
+    try {
+      const fromFirebase = normalizeToken(await firebaseIdTokenProvider());
+      if (fromFirebase) {
+        return fromFirebase;
+      }
+    } catch {
+      /* fall through to dev token */
+    }
+  }
+  return getDevBearerToken();
 }
 
 function pathSegment(value: string): string {
@@ -257,7 +278,7 @@ async function requestJson(path: string, init?: RequestInit): Promise<unknown> {
     headers.set("content-type", "application/json");
   }
 
-  const bearerToken = getDevBearerToken();
+  const bearerToken = await resolveBearerToken();
   if (bearerToken) {
     headers.set("authorization", `Bearer ${bearerToken}`);
   }

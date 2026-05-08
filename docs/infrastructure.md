@@ -69,7 +69,7 @@ Required GitHub Actions secrets (the bootstrap script prints these at the end):
 - `FIREBASE_WEB_API_KEY`, `FIREBASE_WEB_AUTH_DOMAIN`, `FIREBASE_WEB_PROJECT_ID`, `FIREBASE_WEB_STORAGE_BUCKET`, `FIREBASE_WEB_MESSAGING_SENDER_ID`, `FIREBASE_WEB_APP_ID` (Firebase web SDK config for the Hosting build; see **section 3.1**)
 - `DATABASE_URL_PRODUCTION` (used by [`migrate.yml`](../.github/workflows/migrate.yml); a public-IP or proxy-fronted form so GitHub-hosted runners can reach Cloud SQL)
 - `ENABLE_AUTO_PROD_MIGRATE` set to `true` only when ready for automatic migrations on `main`
-- Optional **repository variable** `MEMORIES_MIGRATE_TLS_INSECURE` set to `true` when the **Database migrate** job must connect to Cloud SQL over TLS from a GitHub-hosted runner and Node reports **`unable to verify the first certificate`**. This sets `ssl: { rejectUnauthorized: false }` only for `drizzle-kit migrate` (see `apps/api/drizzle.config.ts`). Prefer a proper CA or Cloud SQL Auth Proxy when you can; this flag is an escape hatch for public-IP migrates.
+- Optional **repository variable** `MEMORIES_MIGRATE_TLS_INSECURE`: set to **`false`** only if you want strict TLS certificate verification for **`drizzle-kit migrate`** from GitHub Actions. The **Database migrate** workflow defaults this behavior **on** (unverified TLS to the server is still encrypted; see `apps/api/drizzle.config.ts` and `MEMORIES_MIGRATE_TLS_INSECURE` in [`migrate.yml`](../.github/workflows/migrate.yml)). Prefer a CA bundle or Cloud SQL Auth Proxy when you can.
 
 ## 4. Immediate "do now" checklist (production-only mode)
 
@@ -123,7 +123,7 @@ If **[Database migrate](../.github/workflows/migrate.yml)** fails with **`unable
 
 1. Use the **Cloud SQL Auth Proxy** in the workflow and point `DATABASE_URL_PRODUCTION` at `127.0.0.1` (more setup, stronger posture), or
 2. Supply the **instance connection** trust bundle your platform recommends for verified TLS, or
-3. Set the repository **Actions variable** `MEMORIES_MIGRATE_TLS_INSECURE` to **`true`** so migrations (and the workflow’s failure diagnostic) use `rejectUnauthorized: false` for that job only.
+3. The migrate workflow **defaults** to relaxed TLS verification for Cloud SQL from GitHub-hosted runners. Set the repository **Actions variable** `MEMORIES_MIGRATE_TLS_INSECURE` to **`false`** only if you need strict certificate verification (and supply a trust path that works from Actions).
 
 ## 6. Related documentation
 
@@ -136,7 +136,7 @@ If **[Database migrate](../.github/workflows/migrate.yml)** fails with **`unable
 
 | Date | Notes |
 | --- | --- |
-| 2026-05-07 | Documented **`MEMORIES_MIGRATE_TLS_INSECURE`** repository variable and **section 5.5** for Cloud SQL TLS from GitHub migrate job; [`migrate.yml`](../.github/workflows/migrate.yml) passes `vars.MEMORIES_MIGRATE_TLS_INSECURE`; [`apps/api/drizzle.config.ts`](../apps/api/drizzle.config.ts) applies optional `ssl` for Drizzle migrate. |
+| 2026-05-07 | **Migrate TLS:** [`drizzle.config.ts`](../apps/api/drizzle.config.ts) parses `DATABASE_URL` with `pg-connection-string` when verification is relaxed (drizzle-kit ignores `ssl` combined with a single `url`). [`migrate.yml`](../.github/workflows/migrate.yml) defaults insecure TLS **on** for the migrate job unless repository variable `MEMORIES_MIGRATE_TLS_INSECURE` is **`false`**. Section 5.5 and secrets list updated. |
 | 2026-05-07 | Switched production target to Google Cloud (`us-west1`): Cloud Run, Cloud SQL `db-f1-micro`, GCS, Firebase Hosting, WIF deploy workflows, and [`infra/gcp/`](../infra/gcp/). Added **section 3.1 Firebase Authentication** (JWT issuer/audience/JWKS, `WEB_ORIGIN`, bucket CORS, `npm run set-firebase-claims`, GitHub `FIREBASE_WEB_*` secrets). Expanded [`infra/gcp/cors.json`](../infra/gcp/cors.json) with Legacy Hosting origins. |
 | 2026-04-30 | Tuned for Railway production-only mode: documented `ENABLE_AUTO_PROD_MIGRATE`, manual-first then automatic `main` migrations, and removed temporary staging dependency from checklist. |
 | 2026-04-30 | Added explicit do-now checklist + production DB migration readiness runbook (staging gate, ownership, rollback, and evidence logging). |

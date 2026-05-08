@@ -1,7 +1,7 @@
 import type { User } from "firebase/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RouterProvider } from "@tanstack/react-router";
 import { createAppRouter } from "./router";
@@ -26,6 +26,7 @@ vi.mock("../lib/firebase", () => ({
 
 describe("LoginPage", () => {
   afterEach(() => {
+    cleanup();
     vi.clearAllMocks();
   });
 
@@ -59,7 +60,16 @@ describe("LoginPage", () => {
       </QueryClientProvider>,
     );
 
-    await userEvent.click(await screen.findByRole("button", { name: /Continue with Google/i }));
-    expect(mocks.signInWithGooglePopup).toHaveBeenCalledTimes(1);
+    const continueButton = await screen.findByRole("button", { name: /Continue with Google/i });
+    await userEvent.click(continueButton);
+
+    await waitFor(() => {
+      expect(mocks.signInWithGooglePopup).toHaveBeenCalledTimes(1);
+    });
+
+    // LoginPage navigates to "/" after sign-in; wait until the router applies it so async work finishes before jsdom teardown.
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/");
+    });
   });
 });

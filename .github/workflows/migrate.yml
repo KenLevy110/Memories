@@ -94,8 +94,8 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_PRODUCTION }}
           API_WORKSPACE: ${{ github.event.inputs.api_workspace || '@memories/api' }}
-          # Set repository variable MEMORIES_MIGRATE_TLS_INSECURE=true when Cloud SQL public IP + GitHub runner hits "unable to verify the first certificate" (see docs/infrastructure.md).
-          MEMORIES_MIGRATE_TLS_INSECURE: ${{ vars.MEMORIES_MIGRATE_TLS_INSECURE }}
+          # Default on for Cloud SQL public-IP migrates from GitHub (see docs/infrastructure.md). Set repository variable MEMORIES_MIGRATE_TLS_INSECURE to false to enforce certificate verification.
+          MEMORIES_MIGRATE_TLS_INSECURE: ${{ vars.MEMORIES_MIGRATE_TLS_INSECURE == 'false' && 'false' || 'true' }}
         run: |
           set -euo pipefail
 

@@ -94,6 +94,8 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_PRODUCTION }}
           API_WORKSPACE: ${{ github.event.inputs.api_workspace || '@memories/api' }}
+          # Set repository variable MEMORIES_MIGRATE_TLS_INSECURE=true when Cloud SQL public IP + GitHub runner hits "unable to verify the first certificate" (see docs/infrastructure.md).
+          MEMORIES_MIGRATE_TLS_INSECURE: ${{ vars.MEMORIES_MIGRATE_TLS_INSECURE }}
         run: |
           set -euo pipefail
 
@@ -123,7 +125,7 @@ jobs:
             cat "$migrate_log"
             echo "----- end db:migrate output -----"
 
-            node -e "const { Client } = require('pg'); (async () => { const client = new Client({ connectionString: process.env.DATABASE_URL }); try { await client.connect(); const { rows } = await client.query('select current_database() as db, current_user as usr, version() as version'); const row = rows[0] || {}; console.log('DB connectivity check:', { database: row.db, user: row.usr, version_prefix: typeof row.version === 'string' ? row.version.split(' ').slice(0, 2).join(' ') : 'unknown' }); } catch (err) { console.error('DB connectivity diagnostic failed:', err && err.message ? err.message : String(err)); } finally { try { await client.end(); } catch {} } })().catch((err) => { console.error('Unexpected diagnostics error:', err && err.message ? err.message : String(err)); });"
+            node -e "const { Client } = require('pg'); const insecure = process.env.MEMORIES_MIGRATE_TLS_INSECURE === 'true' || process.env.MEMORIES_MIGRATE_TLS_INSECURE === '1'; (async () => { const client = new Client({ connectionString: process.env.DATABASE_URL, ...(insecure ? { ssl: { rejectUnauthorized: false } } : {}) }); try { await client.connect(); const { rows } = await client.query('select current_database() as db, current_user as usr, version() as version'); const row = rows[0] || {}; console.log('DB connectivity check:', { database: row.db, user: row.usr, version_prefix: typeof row.version === 'string' ? row.version.split(' ').slice(0, 2).join(' ') : 'unknown' }); } catch (err) { console.error('DB connectivity diagnostic failed:', err && err.message ? err.message : String(err)); } finally { try { await client.end(); } catch {} } })().catch((err) => { console.error('Unexpected diagnostics error:', err && err.message ? err.message : String(err)); });"
 
             exit 1
           fi

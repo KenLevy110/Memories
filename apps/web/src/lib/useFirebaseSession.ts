@@ -16,12 +16,12 @@ export function useFirebaseSession(): {
 } {
   const configured = isFirebaseClientConfigured();
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(configured);
+  // When Firebase env is missing, stay non-loading; when present, loading until auth resolves.
+  const [loading, setLoading] = useState(() => configured);
   const [defaultClientId, setDefaultClientId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!configured) {
-      setLoading(false);
       return;
     }
 

@@ -51,7 +51,7 @@ If behavior, architecture, testing policy, or release gates change, update the c
 - `docs/technical-design-v1.md`
 - `docs/design-wireframe-v1.md`
 - `docs/memories-user-workflow-v1.md`
-- `docs/development-plan-v1.md` (editioned plan; see also optional `docs/development-plan.md` pointer)
+- `docs/development-plan-v1.md` (editioned plan)
 - `docs/tech-stack.md`
 
 For new or substantially rewritten docs under `docs/`, read and follow the matching template in `docs/templates/` before drafting. **Filled-in references** for Legacy are the editioned `docs/*-v1.md` files (PRD, TDD, wireframes, development plan, workflow)—not a separate `docs/examples/` tree.

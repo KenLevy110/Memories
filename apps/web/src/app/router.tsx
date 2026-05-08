@@ -211,17 +211,15 @@ function AppShell() {
   );
 }
 
+const DEFAULT_HOME_CLIENT_ID = "00000000-0000-4000-8000-000000000001";
+
 function HomePage() {
   const navigate = useNavigate();
   const { configured: firebaseConfigured, user: firebaseUser, loading, defaultClientId } =
     useFirebaseSession();
-  const [clientId, setClientId] = useState("00000000-0000-4000-8000-000000000001");
-
-  useEffect(() => {
-    if (defaultClientId) {
-      setClientId(defaultClientId);
-    }
-  }, [defaultClientId]);
+  const [clientIdOverride, setClientIdOverride] = useState<string | null>(null);
+  const clientId =
+    (clientIdOverride ?? defaultClientId ?? DEFAULT_HOME_CLIENT_ID).trim() || DEFAULT_HOME_CLIENT_ID;
 
   return (
     <section className="panel">
@@ -240,7 +238,7 @@ function HomePage() {
       <input
         id="clientIdInput"
         value={clientId}
-        onChange={(event) => setClientId(event.target.value)}
+        onChange={(event) => setClientIdOverride(event.target.value)}
       />
       <button
         type="button"
@@ -699,7 +697,7 @@ function CapturePage() {
         <div className="capture-shell-top">
           <button
             type="button"
-            className="button-secondary capture-shell-back"
+            className="button-secondary capture-shell-back capture-icon-btn"
             onClick={() => {
               const prev = previousCaptureStep(step);
               if (prev) {
@@ -714,7 +712,7 @@ function CapturePage() {
           <h2 className="capture-shell-title">Capture Memory</h2>
           <button
             type="button"
-            className="button-secondary capture-shell-close"
+            className="button-secondary capture-shell-close capture-icon-btn"
             onClick={() => {
               void navigate({ to: "/clients/$clientId/memories", params: { clientId } });
             }}
@@ -722,7 +720,9 @@ function CapturePage() {
             Close
           </button>
         </div>
-        <p className="capture-context-bar">Facilitating for {clientLabel}</p>
+        <p className="capture-context-bar">
+          <span className="capture-context-pill">Facilitating for {clientLabel}</span>
+        </p>
         {progress ? (
           <>
             <p className="capture-step-heading">
@@ -738,23 +738,29 @@ function CapturePage() {
       {!draftLoaded ? <p>Loading draft...</p> : null}
 
       {step === "photo" ? (
-        <div className="step-card">
+        <div className="step-card capture-step-card">
           <p className="capture-lead">Let&apos;s capture something meaningful in the home.</p>
-          <label htmlFor="photoFileInput">Photo</label>
-          <input
-            id="photoFileInput"
-            aria-label="Photo"
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={(event) => {
-              const file = event.currentTarget.files?.[0] ?? null;
-              setImageBlob(file);
-              void resolveImageMimeForUpload(file, null).then((mime) => {
-                setImageMimeType(mime);
-              });
-            }}
-          />
+          <div className="capture-photo-well">
+            <label htmlFor="photoFileInput" className="capture-photo-label">
+              Add photo
+            </label>
+            <input
+              id="photoFileInput"
+              aria-label="Photo"
+              className="capture-photo-input"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={(event) => {
+                const file = event.currentTarget.files?.[0] ?? null;
+                setImageBlob(file);
+                void resolveImageMimeForUpload(file, null).then((mime) => {
+                  setImageMimeType(mime);
+                });
+              }}
+            />
+            <p className="capture-photo-hint">Use the camera or choose a photo from your device.</p>
+          </div>
           <div className="row capture-placeholder-actions">
             <button type="button" className="button-secondary" onClick={() => flashComingSoon("Choose from Library")}>
               Choose from Library
@@ -763,15 +769,17 @@ function CapturePage() {
               Add another photo
             </button>
           </div>
-          {imagePreviewUrl ? <img className="preview" src={imagePreviewUrl} alt="Photo preview" /> : null}
-          <button type="button" disabled={!imageBlob} onClick={() => goToStep("meta")}>
-            Continue
-          </button>
+          {imagePreviewUrl ? <img className="preview capture-photo-preview" src={imagePreviewUrl} alt="Photo preview" /> : null}
+          <div className="capture-footer-actions">
+            <button type="button" className="capture-primary" disabled={!imageBlob} onClick={() => goToStep("meta")}>
+              Continue
+            </button>
+          </div>
         </div>
       ) : null}
 
       {step === "meta" ? (
-        <div className="step-card">
+        <div className="step-card capture-step-card">
           {imagePreviewUrl ? (
             <div className="capture-meta-thumb">
               <img className="preview" src={imagePreviewUrl} alt="" />
@@ -812,11 +820,11 @@ function CapturePage() {
             maxLength={80}
             onChange={(event) => setRoom(event.target.value)}
           />
-          <div className="row">
-            <button type="button" onClick={() => goToStep("photo")}>
+          <div className="capture-footer-actions capture-footer-actions--split">
+            <button type="button" className="button-secondary" onClick={() => goToStep("photo")}>
               Back
             </button>
-            <button type="button" disabled={!title.trim()} onClick={() => goToStep("prompt")}>
+            <button type="button" className="capture-primary" disabled={!title.trim()} onClick={() => goToStep("prompt")}>
               Continue
             </button>
           </div>
@@ -824,7 +832,7 @@ function CapturePage() {
       ) : null}
 
       {step === "prompt" ? (
-        <div className="step-card">
+        <div className="step-card capture-step-card">
           <div className="memory-summary-card">
             <strong>{title.trim() || "Untitled object"}</strong>
             <span className="memory-summary-room">{room.trim() || "Room not set"}</span>
@@ -847,11 +855,11 @@ function CapturePage() {
               Type or transcribe
             </button>
           </div>
-          <div className="row">
-            <button type="button" onClick={() => goToStep("meta")}>
+          <div className="capture-footer-actions capture-footer-actions--split">
+            <button type="button" className="button-secondary" onClick={() => goToStep("meta")}>
               Back
             </button>
-            <button type="button" onClick={() => goToStep("record")}>
+            <button type="button" className="capture-primary" onClick={() => goToStep("record")}>
               Continue to recording
             </button>
           </div>
@@ -859,7 +867,7 @@ function CapturePage() {
       ) : null}
 
       {step === "record" ? (
-        <div className="step-card">
+        <div className="step-card capture-step-card">
           <div className="memory-summary-card memory-summary-compact">
             <strong>{title.trim() || "Untitled object"}</strong>
             <span>{room.trim() || "Room not set"}</span>
@@ -871,15 +879,20 @@ function CapturePage() {
               {room.trim() ? ` in ${room.trim()}` : ""}?&rdquo;
             </p>
           </div>
-          <p className="hint">Use the microphone to record. Unsupported browsers can use the hidden test fallback.</p>
-          <div className="row capture-recorder-actions">
+          <p className={`hint ${isRecording ? "capture-listening" : ""}`}>
+            {isRecording
+              ? "Listening… tap stop when the story is complete."
+              : "Tap the microphone when you are ready to record."}
+          </p>
+          <div className="capture-mic-area">
             {isRecording ? (
-              <button type="button" onClick={stopRecording}>
-                Stop recording
+              <button type="button" className="capture-mic-btn capture-mic-btn--stop" onClick={stopRecording}>
+                Stop
               </button>
             ) : (
-              <button type="button" onClick={() => void startRecording()}>
-                Start recording
+              <button type="button" className="capture-mic-btn" onClick={() => void startRecording()}>
+                <span className="capture-mic-icon" aria-hidden="true" />
+                <span className="visually-hidden">Start recording</span>
               </button>
             )}
           </div>
@@ -911,13 +924,15 @@ function CapturePage() {
           />
           {recordingError ? <p role="alert">{recordingError}</p> : null}
           {audioPreviewUrl ? (
-            <audio aria-label="Audio recording preview" controls src={audioPreviewUrl} />
+            <div className="capture-audio-well">
+              <audio aria-label="Audio recording preview" controls src={audioPreviewUrl} />
+            </div>
           ) : null}
-          <div className="row">
-            <button type="button" onClick={() => goToStep("prompt")}>
+          <div className="capture-footer-actions capture-footer-actions--split">
+            <button type="button" className="button-secondary" onClick={() => goToStep("prompt")}>
               Back
             </button>
-            <button type="button" disabled={!audioBlob} onClick={() => goToStep("review")}>
+            <button type="button" className="capture-primary" disabled={!audioBlob} onClick={() => goToStep("review")}>
               Continue
             </button>
           </div>
@@ -925,7 +940,7 @@ function CapturePage() {
       ) : null}
 
       {step === "review" ? (
-        <div className="step-card">
+        <div className="step-card capture-step-card">
           <p className="capture-review-summary">
             <strong>{title || "(missing title)"}</strong>
             <span>{room || "Room optional"}</span>
@@ -933,7 +948,9 @@ function CapturePage() {
           <p>Photo: {imageBlob ? `${imageBlob.size.toLocaleString()} bytes` : "missing"}</p>
           <p>Audio: {audioBlob ? `${audioBlob.size.toLocaleString()} bytes` : "missing"}</p>
           {audioPreviewUrl ? (
-            <audio aria-label="Review recording" controls src={audioPreviewUrl} />
+            <div className="capture-audio-well">
+              <audio aria-label="Review recording" controls src={audioPreviewUrl} />
+            </div>
           ) : null}
           <div className="review-tags-placeholder">
             <p className="hint">Optional tags</p>
@@ -948,11 +965,11 @@ function CapturePage() {
           </div>
           {saveError ? <p role="alert">{saveError}</p> : null}
           {saveMessage ? <p>{saveMessage}</p> : null}
-          <div className="row wrap">
-            <button type="button" onClick={() => goToStep("record")}>
+          <div className="capture-footer-actions capture-footer-actions--split">
+            <button type="button" className="button-secondary" onClick={() => goToStep("record")}>
               Re-record
             </button>
-            <button type="button" disabled={isSaving} onClick={() => void saveMemory()}>
+            <button type="button" className="capture-primary" disabled={isSaving} onClick={() => void saveMemory()}>
               {isSaving ? "Saving..." : `Save to ${clientLabel}'s Archive`}
             </button>
           </div>
@@ -960,20 +977,27 @@ function CapturePage() {
       ) : null}
 
       {step === "done" ? (
-        <div className="step-card capture-done-card">
-          <h3 className="capture-done-title">Memory saved</h3>
+        <div className="step-card capture-done-card capture-step-card">
+          <h3 className="capture-done-title">
+            <span className="capture-done-check" aria-hidden="true">
+              ✓
+            </span>{" "}
+            Memory saved
+          </h3>
           <p>{saveMessage ?? "Saved to the archive. Replay-safe idempotency header was used."}</p>
           {lastSavedMemoryId ? (
             <Link
+              className="button-link capture-primary-link"
               to="/clients/$clientId/memories/$memoryId"
               params={{ clientId, memoryId: lastSavedMemoryId }}
             >
               View in Archive
             </Link>
           ) : null}
-          <div className="row wrap">
+          <div className="capture-footer-actions capture-footer-actions--stack">
             <button
               type="button"
+              className="capture-primary"
               onClick={async () => {
                 setTitle("");
                 setRoom("");
@@ -988,7 +1012,7 @@ function CapturePage() {
             >
               Capture another memory
             </button>
-            <Link to="/clients/$clientId/memories" params={{ clientId }}>
+            <Link className="button-link capture-secondary-link" to="/clients/$clientId/memories" params={{ clientId }}>
               Return to list
             </Link>
           </div>

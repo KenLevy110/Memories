@@ -14,11 +14,11 @@ For template structure and section intent, see [development-plan-template.md](te
 | Field             | Value                                                                                 |
 | ----------------- | ------------------------------------------------------------------------------------- |
 | **Title**         | Memories — development plan                                                           |
-| **Version**       | 1.8                                                                                   |
+| **Version**       | 1.9                                                                                   |
 | **Author**        | Ken Levy                                                                              |
 | **Date**          | 2026-05-07                                                                            |
 | **Status**        | Draft                                                                                 |
-| **Release**       | Staged: **0.5** (first prod slice) → **0.5.1-demo** (optional UX demo) → **0.6–1.0** (see Section 7) |
+| **Release**       | Staged: **0.5** (first prod slice) → **0.5.1-demo** (optional UX demo) → **0.5.2** (capture visual polish) → **0.6–1.0** (see Section 7) |
 | **Template used** | [docs/templates/development-plan-template.md](templates/development-plan-template.md) |
 
 
@@ -40,7 +40,6 @@ Per [documentation governance](../.cursor/rules/docs-governance.mdc), derived do
 | **Runbook**                     | — (add `docs/runbook.md` when operator steps and on-call playbooks are defined)           |
 | **ADR index**                   | [adr/README.md](adr/README.md)                                                            |
 | **Baseline / superseded plans** | — (link prior `development-plan-v*.md` here when superseded)                              |
-| **Pointer (optional)**          | [development-plan.md](development-plan.md) — stable short link to this edition for humans |
 | **Execution status** (optional) | —                                                                                         |
 
 
@@ -87,7 +86,7 @@ Per [documentation governance](../.cursor/rules/docs-governance.mdc), derived do
 | **FR-018** `sharing_visibility` (P2)                  | Schema may reserve field in **T2**; product behavior deferred unless pulled forward                                               | **Later**                                               |
 | Video recording (workflow screenshots show alternate) | No                                                                                                                                | **0.9**                                                 |
 
-**Stage 0.5.1-demo (optional):** Same **backend contract** and **media limits** as **Stage 0.5** (still **≤1 image + ≤1 audio** on finalize). **Web UI only:** align capture shell with [memories-user-workflow-v1.md](memories-user-workflow-v1.md) (**Step 1–4** framing, facilitator context bar, prompt/review affordances). Present **non-functional** controls for deferred capabilities (**T15–T21**): multi-image, library audio upload path, transcript refresh, video capture, live **suggest_prompt**, curator tags—each surfaces **Coming Soon** (or equivalent) on activate so stakeholder demos match the target workflow without expanding scope to **0.6+** APIs. Tracked as **T25**; tag releases as **`v0.5.1-demo`** when distributing demo builds.
+**Stage 0.5.2 (optional):** **Web only** — closer **hi-fi-adjacent** capture styling toward [memories-user-workflow-v1.md](memories-user-workflow-v1.md) / `docs/assets/workflow-screenshots/` (mobile card shell, warm prompt card, photo well, pill CTAs, circular mic control, success state). **No** API or finalize rule changes; tag **`v0.5.2`** when cutting a build after this polish.
 
 
 ---
@@ -191,6 +190,7 @@ Stages are **product semantics**; map to git/CI as **tags** or release notes (`v
 | --------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
 | **0.5**   | **First production-capable slice:** 1 image + 1 recorded audio; list/detail; authz; offline retry; no transcription required | T1–T14 (exclude T15+)                                                                      | Enable after **Manual** matrix (Section 12.5); STT **off** or not deployed |
 | **0.5.1-demo** | **Internal demo UX:** [memories-user-workflow-v1.md](memories-user-workflow-v1.md)-aligned capture chrome; **Coming Soon** stubs for **T15–T21** surfaces | **T25** (optional; **after** T14)                                                          | **Does not** lift finalize media limits; tag **`v0.5.1-demo`** for stakeholder builds |
+| **0.5.2**   | **Capture visual polish:** hi-fi-adjacent styling (screenshot-inspired); same **0.5** behavior | Web-only follow-up to **T25**                                                            | Tag **`v0.5.2`**; not a new capability stage                               |
 | **0.6**   | Multiple images per memory                                                                                                   | T15                                                                                        | Backward compatible API                                                    |
 | **0.7**   | Audio file upload                                                                                                            | T16                                                                                        | Complements recorder                                                       |
 | **0.8**   | Transcription jobs + poll + UI states                                                                                        | T17, T18                                                                                   | Requires BAA-gated vendor for real PHI                                     |
@@ -207,7 +207,7 @@ Stages are **product semantics**; map to git/CI as **tags** or release notes (`v
 - **Signing & finalize:** T5, T6 in parallel after T4; **T8** integrates.
 - **Read paths:** T7, T9 after T8 foundations.
 - **Web:** T10 and T11 can overlap **after** T9 list/detail stub exists; **T12** tightens resilience.
-- **Post-0.5:** Optionally land **T25** (**0.5.1-demo**) immediately after **T14** for stakeholder demos; otherwise **T15–T21** independently sequenced **after** T14 green; prefer **ordering 0.6 → 0.7 → 0.8 → 0.9 → 1.0** to minimize UI churn (replace **Coming Soon** stubs as each stage ships).
+- **Post-0.5:** Optionally land **T25** (**0.5.1-demo**) immediately after **T14** for stakeholder demos; optional **0.5.2** applies **hi-fi-adjacent** capture CSS without new tickets. Otherwise **T15–T21** independently sequenced **after** T14 green; prefer **ordering 0.6 → 0.7 → 0.8 → 0.9 → 1.0** to minimize UI churn (replace **Coming Soon** stubs as each stage ships).
 
 Skills reference: match owner lane to `.cursor/skills/<name>/SKILL.md` (see Section 12.1).
 
@@ -678,6 +678,8 @@ PR merges that touch `**apps/web`** capture, list, or detail layouts should keep
 | 1.3     | **§12.2** heading **T1–T24**; Session defaults ↔ **§12.5** (template alignment); template cross-refs (**§12.2** prompts, **§12.5** code-quality tie) synced with `**development-plan-template`** + `**development-planner`**.                                     |
 | 1.5     | **§12.5** expanded **0.5** manual matrix (incremental API/web/ops rows + execution note); **§8** manual-scenario bullet aligned; **§12.5** intro clarifies sign-off vs stage gate and **Related tickets** = **all** merged before a row is runnable/sign-offable. |
 | 1.6     | **§12.5** manual procedure checklist + steps for matrix row 3 (upload sign URLs, **T5**/**T6**).                                                                                                                                                                  |
-| 1.8     | **Stage 0.5.1-demo**: Section 4 narrative + §7.1/§7.2/§9; ticket **T25** + Prompt **T25**; §12.4 optional epic inclusion; §12.5 demo matrix row; exec summary delivery note.                                                                                                                                                                                        |
+| 1.7     | **§12.4** **E1–E6** gate tightened: include **T22**, align reviewer scope to **§6.2**, and require explicit CI/coverage + security + release-checklist completion criteria.                                                                                       |
+| 1.8     | **Stage 0.5.1-demo**: Section 4 narrative + §7.1/§7.2/§9; ticket **T25** + Prompt **T25**; §12.4 optional epic inclusion; §12.5 demo matrix row; exec summary delivery note.                                                                                                                                                    |
+| 1.9     | **Stage 0.5.2** (optional): capture route **hi-fi-adjacent** CSS polish toward workflow screenshots; §4 + §7.1/§7.2; no new tickets.                                                                                                                                                                                              |
 
 

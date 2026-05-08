@@ -8,7 +8,7 @@
 | **Status** | Active |
 | **Last updated** | 2026-05-07 |
 | **Template used** | Repository convention (implementation activity log) |
-| **Related docs** | [product-requirements-v1.md](product-requirements-v1.md); [technical-design-v1.md](technical-design-v1.md); [development-plan-v1.md](development-plan-v1.md); [development-plan.md](development-plan.md) (pointer); [adr/README.md](adr/README.md) |
+| **Related docs** | [product-requirements-v1.md](product-requirements-v1.md); [technical-design-v1.md](technical-design-v1.md); [development-plan-v1.md](development-plan-v1.md); [adr/README.md](adr/README.md) |
 
 ---
 
@@ -35,6 +35,19 @@ Each entry should include:
 ---
 
 ## Entries
+
+### 2026-05-07 — Remove `development-plan.md` pointer doc
+
+- **Area:** Docs
+- **Summary:** Deleted optional **`docs/development-plan.md`** redirect; **`docs/development-plan-v1.md`** is the sole canonical development plan link. Updated cross-links in PRD, TDD, tech-stack, **`AGENTS.md`**, **`docs-governance`**, **`development-planner`** / **`developer-manager`** skills, and **`development-plan-v1.md`** §2 table (dropped pointer row).
+- **Touched:** `docs/development-plan.md` (removed); `docs/development-plan-v1.md`; `docs/product-requirements-v1.md`; `docs/technical-design-v1.md`; `docs/tech-stack.md`; `docs/templates/development-plan-template.md`; `docs/implementation-log.md`; `AGENTS.md`; `.cursor/rules/docs-governance.mdc`; `.cursor/skills/development-planner/SKILL.md`; `.cursor/skills/developer-manager/SKILL.md`
+
+### 2026-05-07 - Capture **v0.5.2** hi-fi-adjacent styling (`apps/web`)
+
+- **Area:** Web, Docs
+- **Summary:** Scoped CSS under `.capture-panel` / `:has(.capture-panel)` for gradient page backdrop, card shell, facilitator pill, warm **Ohana Guide** prompt block, dashed photo well, pill primary actions, circular mic + red stop, success checkmark strip. JSX: photo well copy, footer action rows, mic control accessibility, done-state links.
+- **Touched:** `apps/web/src/app/router.tsx`, `apps/web/src/index.css`, `docs/development-plan-v1.md`, `docs/memories-user-workflow-v1.md`, `docs/implementation-log.md`
+- **Validation:** `npm run test -w @memories/web`, `npm run typecheck -w @memories/web`
 
 ### 2026-05-07 - Stage **0.5.1-demo** plan + capture UX (**T25**)
 
@@ -126,9 +139,9 @@ Each entry should include:
 ### 2026-04-30 - Development plan versioning (governance)
 
 - **Area:** Docs / Governance
-- **Summary:** Aligned **AGENTS.md**, **docs-governance**, PRD/TDD/tech-stack links, and **`developer-manager`** skill with **editioned** `docs/development-plan-v1.md` plus optional **`docs/development-plan.md`** pointer. **development-planner** skill already prefers `development-plan-v{N}.md`; **cursor-template** mirrors template + governance wording.
-- **Touched:** `AGENTS.md`, `.cursor/rules/docs-governance.mdc`, `.cursor/skills/developer-manager/SKILL.md`, `docs/development-plan.md`, `docs/templates/development-plan-template.md`, `docs/product-requirements-v1.md`, `docs/technical-design-v1.md`, `docs/tech-stack.md`, `docs/implementation-log.md`
-- **Validation:** Cross-link pass; pointer resolves to `development-plan-v1.md`.
+- **Summary:** Aligned **AGENTS.md**, **docs-governance**, PRD/TDD/tech-stack links, and **`developer-manager`** skill with **editioned** `docs/development-plan-v1.md` (a short unversioned pointer file was also added at the time; **removed 2026-05-07** — see “Remove `development-plan.md` pointer doc”). **development-planner** skill already prefers `development-plan-v{N}.md`; **cursor-template** mirrors template + governance wording.
+- **Touched:** `AGENTS.md`, `.cursor/rules/docs-governance.mdc`, `.cursor/skills/developer-manager/SKILL.md`, `docs/development-plan.md` (since removed), `docs/templates/development-plan-template.md`, `docs/product-requirements-v1.md`, `docs/technical-design-v1.md`, `docs/tech-stack.md`, `docs/implementation-log.md`
+- **Validation:** Cross-link pass; at the time, the pointer resolved to `development-plan-v1.md`.
 - **Links:** [development-plan-v1.md](development-plan-v1.md)
 
 ### 2026-04-30 - Technical decisions documented (SoR, auth, routing)

@@ -45,10 +45,6 @@ Typical citation set (mirror development-plan §**12.1** + session defaults):
 - Prefer **`docs/development-plan-v{edition}.md`** keyed to the same **edition** as paired specs, for example PRD **`product-requirements-v1.md`** plus TDD **`technical-design-v1.md`** ⇒ plan **`development-plan-v1.md`**.
 - Breaking / major initiative replans: **new file** (`development-plan-v2.md`, …) per repository doc-edition norms; link the prior edition in **§2 Linked inputs → Baseline / superseded plans**.
 
-**Optional compat pointer (repository choice):**
-
-- A short **`docs/development-plan.md`** may point humans to the current edition (“see `development-plan-v1.md`”). Do **not** replace the editioned file with unrelated content unless governance requires a single canonical name.
-
 **Authority and metadata:**
 
 1. Duplicate the **`docs/templates/development-plan-template.md`** section structure (**§1 Document control … §13 Revision history**). Paths in generated output assume the repo’s `docs/` layout (read that template from the repo you are planning for).

@@ -13,7 +13,7 @@
 | **Edition**             | **v1** — filename `product-requirements-v1.md`. Breaking rewrites: new file (`-v2.md`, …). Minor edits: same file + revision note below.                                                                                                                                                                                                              |
 | **Last updated**        | 2026-04-30                                                                                                                                                                                                                                                                                                                                             |
 | **Template used**       | `.cursor/skills/product-manager/reference.md`; `docs/templates/product-requirements-template.md` (control table)                                                                                                                                                                                                                                       |
-| **Related docs**        | [README.md](../README.md); [tech-stack.md](tech-stack.md); [memories-user-workflow-v1.md](memories-user-workflow-v1.md); [technical-design-v1.md](technical-design-v1.md) **v1.5** (Approved); [design-wireframe-v1.md](design-wireframe-v1.md); [development-plan-v1.md](development-plan-v1.md); [development-plan.md](development-plan.md) (pointer); [implementation-log.md](implementation-log.md); [adr/README.md](adr/README.md); [Prototype Backend Engineering Handoff.md](Prototype%20Backend%20Engineering%20Handoff.md) |
+| **Related docs**        | [README.md](../README.md); [tech-stack.md](tech-stack.md); [memories-user-workflow-v1.md](memories-user-workflow-v1.md); [technical-design-v1.md](technical-design-v1.md) **v1.5** (Approved); [design-wireframe-v1.md](design-wireframe-v1.md); [development-plan-v1.md](development-plan-v1.md); [implementation-log.md](implementation-log.md); [adr/README.md](adr/README.md); [Prototype Backend Engineering Handoff.md](Prototype%20Backend%20Engineering%20Handoff.md) |
 | **External references** | [Notion mirror](https://plump-cheddar-f44.notion.site/Prototype-Backend-Engineering-Handoff-349fc9f5d1f880968428eac8506f728a?pvs=73) — **authoritative:** repo handoff markdown above                                                                                                                                                                  |
 
 
@@ -166,7 +166,7 @@ A **Memory** is metadata (e.g. name, room; optional era/valence per Section 4.3)
 
 ## Milestones, risks, open questions
 
-**Milestones:** [technical-design-v1.md](technical-design-v1.md) **v1.5 (Approved)** enumerates MVP HTTP routes (**§3.2**), observability playbook (**§3.3**), transcript polling contract, JWT hardening checklist, and Appendix A MVP clarifications, while STT eval (~20 samples, Section 3.4) runs in parallel. Cross-product MVP pilot Section 12.1 remains TBD (~3–6 mo order-of-magnitude, Section 12.4). Execution sequencing and staged prod slices: **[development-plan-v1.md](development-plan-v1.md)** ([pointer](development-plan.md)).
+**Milestones:** [technical-design-v1.md](technical-design-v1.md) **v1.5 (Approved)** enumerates MVP HTTP routes (**§3.2**), observability playbook (**§3.3**), transcript polling contract, JWT hardening checklist, and Appendix A MVP clarifications, while STT eval (~20 samples, Section 3.4) runs in parallel. Cross-product MVP pilot Section 12.1 remains TBD (~3–6 mo order-of-magnitude, Section 12.4). Execution sequencing and staged prod slices: **[development-plan-v1.md](development-plan-v1.md)**.
 
 **Risks:** BAA lead time → parallel legal + synthetic staging (Sections 8.5–8.6); offline capture cost → timeboxed spike (Section 12.4); repo boundary → explicit contracts in TDD; PHI in notifications/logs → generic notifications + redaction (Sections 10.3, 11.1).
 
@@ -193,7 +193,7 @@ A **Memory** is metadata (e.g. name, room; optional era/valence per Section 4.3)
 | v1 | 2026-04-22 | Renamed to `product-requirements-v1.md`; content PRD 1.0 |
 | v1.1 | 2026-04-30 | Closed prior “open questions” via ADR-20260430 + TDD 1.1; FR-007 room rule clarified |
 | v1.2 | 2026-04-30 | Elevated PRD/TDD alignment—Approved pairing with **[technical-design-v1.md](technical-design-v1.md)** **v1.2** (route addendum, observability playbook, JWT posture, clarified family MVP) |
-| v1.3 | 2026-04-30 | Related docs: **[development-plan-v1.md](development-plan-v1.md)** + [pointer](development-plan.md); NFR-010/011 and milestones cross-links to editioned plan |
+| v1.3 | 2026-04-30 | Related docs: **[development-plan-v1.md](development-plan-v1.md)**; NFR-010/011 and milestones cross-links to editioned plan |
 | v1.4 | 2026-04-30 | **NFR-010** notes: pointer to **[development-plan-v1.md](development-plan-v1.md) §5.1** + implementation-log for owners |
 | v1.5 | 2026-04-30 | **Tenancy:** Guide vs client-self logins sharing one **client workspace** (**`client_id`**); **`FR-012`** clarified; glossary + scenarios; aligns with **[technical-design-v1.md](technical-design-v1.md)** v1.5 |
 

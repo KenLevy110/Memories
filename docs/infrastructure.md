@@ -69,6 +69,7 @@ Required GitHub Actions secrets (the bootstrap script prints these at the end):
 - `FIREBASE_WEB_API_KEY`, `FIREBASE_WEB_AUTH_DOMAIN`, `FIREBASE_WEB_PROJECT_ID`, `FIREBASE_WEB_STORAGE_BUCKET`, `FIREBASE_WEB_MESSAGING_SENDER_ID`, `FIREBASE_WEB_APP_ID` (Firebase web SDK config for the Hosting build; see **section 3.1**)
 - `DATABASE_URL_PRODUCTION` (used by [`migrate.yml`](../.github/workflows/migrate.yml); a public-IP or proxy-fronted form so GitHub-hosted runners can reach Cloud SQL)
 - `ENABLE_AUTO_PROD_MIGRATE` set to `true` only when ready for automatic migrations on `main`
+- Optional **repository variable** `MEMORIES_MIGRATE_TLS_INSECURE` set to `true` when the **Database migrate** job must connect to Cloud SQL over TLS from a GitHub-hosted runner and Node reports **`unable to verify the first certificate`**. This sets `ssl: { rejectUnauthorized: false }` only for `drizzle-kit migrate` (see `apps/api/drizzle.config.ts`). Prefer a proper CA or Cloud SQL Auth Proxy when you can; this flag is an escape hatch for public-IP migrates.
 
 ## 4. Immediate "do now" checklist (production-only mode)
 
@@ -116,6 +117,14 @@ Keep these deferred until production migration cadence is stable:
 - Destructive/contract-tightening schema changes in the same release as feature rollout.
 - Cloud SQL HA + read replica (move to `db-g1-small` or larger first).
 
+### 5.5 GitHub-hosted migrate job and TLS to Cloud SQL
+
+If **[Database migrate](../.github/workflows/migrate.yml)** fails with **`unable to verify the first certificate`** (or similar) while **drizzle-kit** is applying migrations, the runner is rejecting Cloud SQL’s server certificate chain. Typical mitigations, in order of preference:
+
+1. Use the **Cloud SQL Auth Proxy** in the workflow and point `DATABASE_URL_PRODUCTION` at `127.0.0.1` (more setup, stronger posture), or
+2. Supply the **instance connection** trust bundle your platform recommends for verified TLS, or
+3. Set the repository **Actions variable** `MEMORIES_MIGRATE_TLS_INSECURE` to **`true`** so migrations (and the workflow’s failure diagnostic) use `rejectUnauthorized: false` for that job only.
+
 ## 6. Related documentation
 
 - Stack summary: [tech-stack.md](tech-stack.md)
@@ -127,6 +136,7 @@ Keep these deferred until production migration cadence is stable:
 
 | Date | Notes |
 | --- | --- |
+| 2026-05-07 | Documented **`MEMORIES_MIGRATE_TLS_INSECURE`** repository variable and **section 5.5** for Cloud SQL TLS from GitHub migrate job; [`migrate.yml`](../.github/workflows/migrate.yml) passes `vars.MEMORIES_MIGRATE_TLS_INSECURE`; [`apps/api/drizzle.config.ts`](../apps/api/drizzle.config.ts) applies optional `ssl` for Drizzle migrate. |
 | 2026-05-07 | Switched production target to Google Cloud (`us-west1`): Cloud Run, Cloud SQL `db-f1-micro`, GCS, Firebase Hosting, WIF deploy workflows, and [`infra/gcp/`](../infra/gcp/). Added **section 3.1 Firebase Authentication** (JWT issuer/audience/JWKS, `WEB_ORIGIN`, bucket CORS, `npm run set-firebase-claims`, GitHub `FIREBASE_WEB_*` secrets). Expanded [`infra/gcp/cors.json`](../infra/gcp/cors.json) with Legacy Hosting origins. |
 | 2026-04-30 | Tuned for Railway production-only mode: documented `ENABLE_AUTO_PROD_MIGRATE`, manual-first then automatic `main` migrations, and removed temporary staging dependency from checklist. |
 | 2026-04-30 | Added explicit do-now checklist + production DB migration readiness runbook (staging gate, ownership, rollback, and evidence logging). |

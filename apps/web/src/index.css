@@ -197,57 +197,6 @@ input {
   background: #f1f5f9;
 }
 
-.capture-panel {
-  gap: 1rem;
-}
-
-.capture-shell-header {
-  display: grid;
-  gap: 0.35rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.capture-shell-top {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.capture-shell-title {
-  margin: 0;
-  font-size: 1.15rem;
-  text-align: center;
-}
-
-.capture-context-bar {
-  margin: 0;
-  font-size: 0.95rem;
-  color: #475569;
-  text-align: center;
-}
-
-.capture-step-heading {
-  margin: 0.25rem 0 0;
-  font-weight: 600;
-  font-size: 0.95rem;
-}
-
-.capture-progress-track {
-  height: 6px;
-  border-radius: 999px;
-  background: #e5e7eb;
-  overflow: hidden;
-}
-
-.capture-progress-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: #3b82f6;
-  transition: width 0.2s ease;
-}
-
 .capture-lead {
   margin: 0;
   color: #475569;
@@ -364,12 +313,357 @@ input {
   font-size: 0.95rem;
 }
 
-.capture-done-title {
-  margin-top: 0;
-}
-
 .detail-transcript-placeholder,
 .detail-tags-placeholder {
   padding: 0.5rem 0;
   border-top: 1px solid #e5e7eb;
+}
+
+/* Capture route — v0.5.2 visual polish (hi-fi-adjacent; scoped to workflow screens) */
+.app-main:has(.capture-panel) {
+  min-height: 100%;
+  padding: 0.75rem 0.75rem 1.5rem;
+  background: linear-gradient(165deg, #e8ecf8 0%, #f7f4f0 45%, #f0f1f4 100%);
+}
+
+.capture-panel {
+  display: grid;
+  gap: 1rem;
+  width: min(26rem, 100%);
+  margin-inline: auto;
+  padding: 1rem 1rem 1.25rem;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 1.25rem;
+  box-shadow:
+    0 4px 6px -1px rgba(15, 23, 42, 0.06),
+    0 12px 28px -8px rgba(30, 58, 95, 0.12);
+}
+
+.capture-shell-header {
+  display: grid;
+  gap: 0.4rem;
+  padding-bottom: 1rem;
+  margin-bottom: 0.25rem;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+  border-radius: 0.85rem;
+  padding: 0.65rem 0.75rem 1rem;
+}
+
+.capture-shell-top {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.capture-shell-title {
+  margin: 0;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+}
+
+.capture-icon-btn {
+  padding: 0.35rem 0.55rem;
+  font-size: 0.85rem;
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+}
+
+.capture-context-bar {
+  text-align: center;
+  margin-top: 0.35rem;
+}
+
+.capture-context-pill {
+  display: inline-block;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #334155;
+  background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%);
+  border: 1px solid #fdba74;
+}
+
+.capture-step-heading {
+  margin-top: 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.capture-progress-track {
+  height: 8px;
+  margin-top: 0.35rem;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.capture-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #3b82f6 0%, #6366f1 55%, #8b5cf6 100%);
+  transition: width 0.2s ease;
+}
+
+.capture-step-card {
+  border: none;
+  border-radius: 1rem;
+  padding: 1rem;
+  background: #fafbfc;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.capture-panel .capture-step-card input {
+  background: #ffffff;
+  border-color: #cbd5e1;
+}
+
+.capture-photo-well {
+  display: grid;
+  gap: 0.65rem;
+  justify-items: center;
+  text-align: center;
+  padding: 1.25rem 1rem;
+  border-radius: 1rem;
+  border: 2px dashed #94a3b8;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.capture-photo-label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #1e293b;
+}
+
+.capture-photo-input {
+  max-width: 100%;
+  font-size: 0.8rem;
+}
+
+.capture-photo-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #64748b;
+  max-width: 16rem;
+}
+
+.capture-photo-preview {
+  border-radius: 0.75rem;
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.capture-panel .memory-summary-card {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.capture-panel .guide-prompt-card {
+  background: linear-gradient(145deg, #fffbeb 0%, #fef3c7 40%, #fde68a 120%);
+  border: 1px solid #fcd34d;
+  box-shadow: 0 2px 8px rgba(180, 83, 9, 0.08);
+}
+
+.capture-panel .guide-prompt-quiet {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: none;
+}
+
+.capture-panel .guide-prompt-card .guide-prompt-label {
+  color: #92400e;
+}
+
+.capture-panel .guide-prompt-quiet .guide-prompt-label {
+  color: #64748b;
+}
+
+.capture-listening {
+  font-weight: 600;
+  color: #1d4ed8;
+}
+
+.capture-mic-area {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1.25rem 0 0.5rem;
+}
+
+.capture-mic-btn {
+  width: 5.75rem;
+  height: 5.75rem;
+  border-radius: 50%;
+  border: none;
+  background: radial-gradient(circle at 35% 30%, #60a5fa 0%, #2563eb 45%, #1d4ed8 100%);
+  color: #ffffff;
+  box-shadow:
+    0 4px 14px rgba(37, 99, 235, 0.45),
+    inset 0 2px 0 rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.capture-mic-btn:hover:not(:disabled) {
+  transform: scale(1.03);
+  box-shadow:
+    0 6px 20px rgba(37, 99, 235, 0.5),
+    inset 0 2px 0 rgba(255, 255, 255, 0.3);
+}
+
+.capture-mic-btn--stop {
+  width: auto;
+  min-width: 5.75rem;
+  height: 5.75rem;
+  border-radius: 50%;
+  padding: 0 1.25rem;
+  font-size: 1rem;
+  font-weight: 700;
+  background: radial-gradient(circle at 35% 30%, #f87171 0%, #dc2626 50%, #b91c1c 100%);
+  box-shadow:
+    0 4px 14px rgba(220, 38, 38, 0.45),
+    inset 0 2px 0 rgba(255, 255, 255, 0.2);
+}
+
+.capture-mic-icon {
+  width: 1.35rem;
+  height: 1.75rem;
+  border-radius: 0.45rem;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: inset 0 -2px 0 rgba(15, 23, 42, 0.12);
+}
+
+.capture-audio-well {
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+.capture-audio-well audio {
+  width: 100%;
+}
+
+.capture-footer-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+.capture-footer-actions--split {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.capture-footer-actions--split .button-secondary {
+  flex: 0 0 auto;
+  align-self: center;
+}
+
+.capture-footer-actions--split .capture-primary {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.capture-footer-actions--stack .capture-primary,
+.capture-footer-actions--stack .capture-primary-link {
+  width: 100%;
+  justify-content: center;
+  text-align: center;
+}
+
+.capture-primary {
+  min-height: 3rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 999px;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.35);
+  width: 100%;
+}
+
+.capture-footer-actions--split .capture-primary {
+  width: auto;
+}
+
+.capture-primary:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.capture-primary-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 3rem;
+  border-radius: 999px;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
+.capture-secondary-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 2.75rem;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #2563eb;
+  border: 1px solid #93c5fd;
+  font-weight: 600;
+}
+
+.capture-done-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  font-size: 1rem;
+  line-height: 1;
+  color: #ffffff;
+  background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+  margin-right: 0.35rem;
+  vertical-align: middle;
+}
+
+.capture-done-title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  font-size: 1.25rem;
+  color: #0f172a;
+}
+
+.capture-done-card {
+  text-align: center;
+  background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 55%);
+  border-color: #bbf7d0;
 }

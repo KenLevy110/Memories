@@ -130,7 +130,7 @@ describe("api auth shell", () => {
       method: "OPTIONS",
       url: `/${practiceId}/uploads/images/${mediaId}`,
       headers: {
-        referer: "http://localhost:5173/clients/00000000-0000-4000-8000-000000000001/capture",
+        referer: "http://localhost:5173/clients/8f9512d8-e88f-4f82-a8e9-6cb19a43ad52/capture",
         "access-control-request-method": "PUT",
         "access-control-request-headers": "content-type",
       },

@@ -9,7 +9,7 @@ function buildFinalizeResponse() {
   return {
     memory: {
       memory_id: "77777777-7777-4777-8777-777777777777",
-      client_id: "00000000-0000-4000-8000-000000000001",
+      client_id: "8f9512d8-e88f-4f82-a8e9-6cb19a43ad52",
       practice_id: "11111111-1111-4111-8111-111111111111",
       title: "Photo + audio memory",
       room: "Living room",
@@ -53,7 +53,7 @@ describe("capture flow smoke", () => {
 
   it("completes photo->meta->prompt->record->review->done and sends idempotency header", async () => {
     window.localStorage.setItem("memories.devBearerToken", "token-for-capture-test");
-    window.history.pushState({}, "", "/clients/00000000-0000-4000-8000-000000000001/capture?step=photo");
+    window.history.pushState({}, "", "/clients/8f9512d8-e88f-4f82-a8e9-6cb19a43ad52/capture?step=photo");
 
     const fetchCalls: Array<{ url: string; method: string; headers: Headers; body?: string }> =
       [];
@@ -107,7 +107,7 @@ describe("capture flow smoke", () => {
         return new Response(null, { status: 200 });
       }
 
-      if (url.includes("/api/v1/clients/00000000-0000-4000-8000-000000000001/memories")) {
+      if (url.includes("/api/v1/clients/8f9512d8-e88f-4f82-a8e9-6cb19a43ad52/memories")) {
         return new Response(JSON.stringify(buildFinalizeResponse()), {
           status: 200,
           headers: { "content-type": "application/json" },
@@ -160,7 +160,7 @@ describe("capture flow smoke", () => {
       });
 
       const finalizeCall = fetchCalls.find((call) =>
-        call.url.includes("/api/v1/clients/00000000-0000-4000-8000-000000000001/memories"),
+        call.url.includes("/api/v1/clients/8f9512d8-e88f-4f82-a8e9-6cb19a43ad52/memories"),
       );
       const imageUploadCall = fetchCalls.find(
         (call) => call.url === "https://uploads.example.com/image",
@@ -182,7 +182,7 @@ describe("capture flow smoke", () => {
 
   it("shows Coming Soon when a deferred capture control is used", async () => {
     window.localStorage.setItem("memories.devBearerToken", "token-for-capture-test");
-    window.history.pushState({}, "", "/clients/00000000-0000-4000-8000-000000000001/capture?step=photo");
+    window.history.pushState({}, "", "/clients/8f9512d8-e88f-4f82-a8e9-6cb19a43ad52/capture?step=photo");
 
     const queryClient = new QueryClient({
       defaultOptions: {

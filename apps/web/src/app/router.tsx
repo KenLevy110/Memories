@@ -211,7 +211,8 @@ function AppShell() {
   );
 }
 
-const DEFAULT_HOME_CLIENT_ID = "00000000-0000-4000-8000-000000000001";
+// Matches DEFAULT_CLAIMS.client_id in apps/api/scripts/local-auth-dev.ts (dev bearer token).
+const DEFAULT_HOME_CLIENT_ID = "8f9512d8-e88f-4f82-a8e9-6cb19a43ad52";
 
 function HomePage() {
   const navigate = useNavigate();

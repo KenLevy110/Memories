@@ -91,13 +91,15 @@ jobs:
           set -euo pipefail
           URL="$(gcloud run services describe ${{ secrets.GCP_API_SERVICE }} --region=${{ secrets.GCP_REGION }} --format='value(status.url)')"
           echo "Service URL: $URL"
-          for i in 1 2 3 4 5; do
-            if curl -fsSL "$URL/health" > /tmp/health.json; then
+          # Cloud Run new revisions can need 30-90s to become serving-ready
+          # (cold start + JWKS fetch + Cloud SQL handshake). Probe for up to ~3 min.
+          for i in $(seq 1 18); do
+            if curl -fsSL --max-time 10 "$URL/health" > /tmp/health.json; then
               cat /tmp/health.json
               exit 0
             fi
-            echo "Health probe attempt $i failed; retrying…"
-            sleep 5
+            echo "Health probe attempt $i failed; retrying in 10s…"
+            sleep 10
           done
-          echo "::error::Health probe failed after 5 attempts."
+          echo "::error::Health probe failed after 18 attempts (~3 minutes)."
           exit 1

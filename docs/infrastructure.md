@@ -6,7 +6,7 @@
 | --- | --- |
 | **Purpose** | Where production-related services live and how operators sign in (no credentials in git). |
 | **Owner** | Eng/Ops |
-| **Last updated** | 2026-05-07 |
+| **Last updated** | 2026-05-08 |
 
 This document is a **vendor map** only. **Do not** store API keys, database URLs, provider keys, session secrets, or recovery codes here — use **Google Secret Manager**, your password manager, and **GitHub Actions** repository secrets.
 
@@ -71,6 +71,8 @@ Required GitHub Actions secrets (the bootstrap script prints these at the end):
 - `ENABLE_AUTO_PROD_MIGRATE` set to `true` only when ready for automatic migrations on `main`
 - Optional **repository variable** `MEMORIES_MIGRATE_TLS_INSECURE`: set to **`false`** only if you want strict TLS certificate verification for **`drizzle-kit migrate`** from GitHub Actions. The **Database migrate** workflow defaults this behavior **on** (unverified TLS to the server is still encrypted; see `apps/api/drizzle.config.ts` and `MEMORIES_MIGRATE_TLS_INSECURE` in [`migrate.yml`](../.github/workflows/migrate.yml)). Prefer a CA bundle or Cloud SQL Auth Proxy when you can.
 
+For a **names-only** table (GitHub secrets and variables vs GCP Secret Manager), use [github-actions-secrets-inventory.md](github-actions-secrets-inventory.md). Update that file when workflow references change.
+
 ## 4. Immediate "do now" checklist (production-only mode)
 
 Complete these before the first production-bound schema cut:
@@ -127,6 +129,7 @@ If **[Database migrate](../.github/workflows/migrate.yml)** fails with **`unable
 
 ## 6. Related documentation
 
+- GitHub Actions secret/variable **names only**: [github-actions-secrets-inventory.md](github-actions-secrets-inventory.md)
 - Stack summary: [tech-stack.md](tech-stack.md)
 - Architecture and vendors: [technical-design-v1.md](technical-design-v1.md)
 - Operator runbook: [`infra/gcp/README.md`](../infra/gcp/README.md)
@@ -136,6 +139,7 @@ If **[Database migrate](../.github/workflows/migrate.yml)** fails with **`unable
 
 | Date | Notes |
 | --- | --- |
+| 2026-05-08 | Linked [github-actions-secrets-inventory.md](github-actions-secrets-inventory.md) (names-only GitHub vs GCP Secret Manager checklist). |
 | 2026-05-07 | **Migrate TLS:** [`drizzle.config.ts`](../apps/api/drizzle.config.ts) parses `DATABASE_URL` with `pg-connection-string` when verification is relaxed (drizzle-kit ignores `ssl` combined with a single `url`). [`migrate.yml`](../.github/workflows/migrate.yml) defaults insecure TLS **on** for the migrate job unless repository variable `MEMORIES_MIGRATE_TLS_INSECURE` is **`false`**. Section 5.5 and secrets list updated. |
 | 2026-05-07 | Switched production target to Google Cloud (`us-west1`): Cloud Run, Cloud SQL `db-f1-micro`, GCS, Firebase Hosting, WIF deploy workflows, and [`infra/gcp/`](../infra/gcp/). Added **section 3.1 Firebase Authentication** (JWT issuer/audience/JWKS, `WEB_ORIGIN`, bucket CORS, `npm run set-firebase-claims`, GitHub `FIREBASE_WEB_*` secrets). Expanded [`infra/gcp/cors.json`](../infra/gcp/cors.json) with Legacy Hosting origins. |
 | 2026-04-30 | Tuned for Railway production-only mode: documented `ENABLE_AUTO_PROD_MIGRATE`, manual-first then automatic `main` migrations, and removed temporary staging dependency from checklist. |

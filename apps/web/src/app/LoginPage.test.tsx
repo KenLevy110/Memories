@@ -9,6 +9,7 @@ import { createAppRouter } from "./router";
 const mocks = vi.hoisted(() => ({
   signInWithGooglePopup: vi.fn(),
   isFirebaseClientConfigured: vi.fn(),
+  getFirebaseAuthErrorMessage: vi.fn((error: unknown) => (error instanceof Error ? error.message : "Sign-in failed.")),
 }));
 
 vi.mock("../lib/firebase", () => ({
@@ -19,6 +20,7 @@ vi.mock("../lib/firebase", () => ({
     callback(null);
     return () => {};
   },
+  getFirebaseAuthErrorMessage: mocks.getFirebaseAuthErrorMessage,
   signInWithGooglePopup: mocks.signInWithGooglePopup,
   signOutFirebase: vi.fn(),
   readMemoriesClaims: vi.fn().mockResolvedValue({}),
@@ -71,5 +73,30 @@ describe("LoginPage", () => {
     await waitFor(() => {
       expect(window.location.pathname).toBe("/");
     });
+  });
+
+  it("shows a mapped auth error when sign-in fails", async () => {
+    mocks.isFirebaseClientConfigured.mockReturnValue(true);
+    mocks.signInWithGooglePopup.mockRejectedValue(new Error("Firebase: Error (auth/operation-not-allowed)."));
+    mocks.getFirebaseAuthErrorMessage.mockReturnValue(
+      "Google sign-in is disabled for this Firebase project. Enable Google in Firebase Authentication > Sign-in method and confirm your Hosting domain is listed in Authentication > Settings > Authorized domains.",
+    );
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const router = createAppRouter();
+    window.history.pushState({}, "", "/login");
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    );
+
+    const continueButton = await screen.findByRole("button", { name: /Continue with Google/i });
+    await userEvent.click(continueButton);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Google sign-in is disabled for this Firebase project/i);
+    expect(mocks.getFirebaseAuthErrorMessage).toHaveBeenCalledTimes(1);
   });
 });

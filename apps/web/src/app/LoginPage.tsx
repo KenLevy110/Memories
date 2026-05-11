@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { isFirebaseClientConfigured, signInWithGooglePopup } from "../lib/firebase";
+import { getFirebaseAuthErrorMessage, isFirebaseClientConfigured, signInWithGooglePopup } from "../lib/firebase";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -37,7 +37,7 @@ export function LoginPage() {
             void signInWithGooglePopup()
               .then(() => navigate({ to: "/" }))
               .catch((err: unknown) => {
-                setError(err instanceof Error ? err.message : "Sign-in failed.");
+                setError(getFirebaseAuthErrorMessage(err));
               })
               .finally(() => {
                 setPending(false);

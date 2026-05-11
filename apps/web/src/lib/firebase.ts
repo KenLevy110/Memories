@@ -86,6 +86,35 @@ export async function signInWithGooglePopup(): Promise<void> {
   await signInWithPopup(auth, provider);
 }
 
+export function getFirebaseAuthErrorMessage(error: unknown): string {
+  const code =
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof (error as { code: unknown }).code === "string"
+      ? (error as { code: string }).code
+      : null;
+
+  switch (code) {
+    case "auth/operation-not-allowed":
+      return "Google sign-in is disabled for this Firebase project. Enable Google in Firebase Authentication > Sign-in method and confirm your Hosting domain is listed in Authentication > Settings > Authorized domains.";
+    case "auth/unauthorized-domain":
+      return "This site domain is not authorized for Firebase sign-in. Add the current domain in Firebase Authentication > Settings > Authorized domains.";
+    case "auth/popup-blocked":
+      return "Your browser blocked the Google sign-in popup. Allow popups for this site and try again.";
+    case "auth/popup-closed-by-user":
+      return "Google sign-in was canceled before completion.";
+    default:
+      break;
+  }
+
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
+
+  return "Sign-in failed.";
+}
+
 export async function signOutFirebase(): Promise<void> {
   const auth = getFirebaseAuthOrNull();
   if (!auth) {

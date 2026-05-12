@@ -1,12 +1,28 @@
 import { spawn } from "node:child_process";
 
-const run = (script) =>
+const run = (script, { quiet = false } = {}) =>
   new Promise((resolve, reject) => {
-    const child = spawn("npm", ["run", script], {
-      stdio: "inherit",
-      shell: true,
-      env: process.env,
-    });
+    const npmRunCommand = `npm run --silent ${script}`;
+    const stdio = quiet ? ["ignore", "pipe", "pipe"] : "inherit";
+    const child =
+      process.platform === "win32"
+        ? spawn(npmRunCommand, {
+            stdio,
+            shell: true,
+            env: process.env,
+          })
+        : spawn("npm", ["run", "--silent", script], {
+            stdio,
+            shell: false,
+            env: process.env,
+          });
+
+    let bufferedStderr = "";
+    if (quiet) {
+      child.stderr?.on("data", (chunk) => {
+        bufferedStderr += chunk.toString();
+      });
+    }
 
     child.on("error", reject);
     child.on("exit", (code) => {
@@ -14,12 +30,16 @@ const run = (script) =>
         resolve();
         return;
       }
+      if (quiet && bufferedStderr.trim().length > 0) {
+        process.stderr.write(bufferedStderr);
+      }
       reject(new Error(`npm run ${script} failed with code ${code ?? "unknown"}`));
     });
   });
 
 const main = async () => {
-  await run("dev:clean");
+  console.log("Starting API and web dev servers...");
+  await run("dev:clean", { quiet: true });
   await run("dev:all");
 };
 

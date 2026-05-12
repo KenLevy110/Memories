@@ -12,7 +12,29 @@ function run(command, args) {
   return execFileSync(command, args, { encoding: "utf8", stdio: "pipe" });
 }
 
+function getWindowsPidsViaPowerShell(port) {
+  try {
+    const output = run("powershell", [
+      "-NoProfile",
+      "-Command",
+      `Get-NetTCPConnection -LocalPort ${port} -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique`,
+    ]);
+
+    return output
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => /^\d+$/.test(line));
+  } catch {
+    return [];
+  }
+}
+
 function getWindowsPids(port) {
+  const powershellPids = getWindowsPidsViaPowerShell(port);
+  if (powershellPids.length > 0) {
+    return powershellPids;
+  }
+
   const output = run("netstat", ["-ano", "-p", "tcp"]);
   const lines = output.split(/\r?\n/);
   const pids = new Set();
@@ -30,12 +52,7 @@ function getWindowsPids(port) {
     }
 
     const localAddress = parts[1] ?? "";
-    const state = parts[3] ?? "";
-    const pid = parts[4] ?? "";
-
-    if (state !== "LISTENING") {
-      continue;
-    }
+    const pid = parts[parts.length - 1] ?? "";
     if (!portPattern.test(localAddress)) {
       continue;
     }

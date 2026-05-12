@@ -333,6 +333,31 @@ function hashActorId(userId: string | null): string | null {
   return createHash("sha256").update(userId).digest("hex");
 }
 
+/**
+ * Reads the actor user id from the JWT, preferring `actor_user_id` over `user_id`.
+ *
+ * Firebase Auth ID tokens always populate `user_id` (and `sub`) with the raw
+ * Firebase UID; custom claims with the reserved name `user_id` are silently
+ * dropped on token issuance. Memories stores `actor_user_id` as a UUID column
+ * in Postgres, so production tokens issued by Firebase Auth must carry the
+ * application UUID under the non-reserved name `actor_user_id`. Local/dev
+ * tokens (see `apps/api/scripts/local-auth-dev.ts`) and existing tests still
+ * use `user_id`, which remains supported as a fallback.
+ *
+ * Source of truth for which custom claims to write: `apps/api/scripts/set-memories-firebase-claims.ts`
+ * and `docs/infrastructure.md` §3.1.
+ */
+function readActorUserIdClaim(payload: JWTPayload | null): string | null {
+  if (!payload) {
+    return null;
+  }
+  const fromActor = readStringClaim(payload, "actor_user_id");
+  if (fromActor) {
+    return fromActor;
+  }
+  return readStringClaim(payload, "user_id");
+}
+
 function getPathParam(
   params: unknown,
   paramName: "clientId" | "memoryId" | "mediaId",
@@ -372,9 +397,7 @@ function logAuthzDenied(
       route: normalizePath(request.url),
       target_client_id: targetClientId,
       memory_id_present: memoryIdPresent,
-      actor_hash: hashActorId(
-        request.auth ? readStringClaim(request.auth, "user_id") : null,
-      ),
+      actor_hash: hashActorId(readActorUserIdClaim(request.auth)),
     },
     "Authorization denied.",
   );
@@ -479,7 +502,7 @@ function requireActorUserIdForMutation(request: {
     throw new HttpError(401, "UNAUTHORIZED", "Bearer token is required.");
   }
 
-  const actorUserId = readStringClaim(request.auth, "user_id");
+  const actorUserId = readActorUserIdClaim(request.auth);
   if (!actorUserId || !isUuid(actorUserId)) {
     request.log.warn(
       {
@@ -527,7 +550,7 @@ function requireGuideMutationRole(request: {
       request_id: request.id,
       method: request.method,
       route: normalizePath(request.url),
-      actor_hash: hashActorId(readStringClaim(request.auth, "user_id")),
+      actor_hash: hashActorId(readActorUserIdClaim(request.auth)),
     },
     "Authorization denied.",
   );
@@ -1857,7 +1880,7 @@ function requirePracticeIdForProtectedRoute(request: {
         request_id: request.id,
         method: request.method,
         route: normalizePath(request.url),
-        actor_hash: hashActorId(readStringClaim(request.auth, "user_id")),
+        actor_hash: hashActorId(readActorUserIdClaim(request.auth)),
       },
       "Authorization denied.",
     );

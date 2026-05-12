@@ -806,6 +806,115 @@ describe("api auth shell", () => {
     expect(secondBody.memory.memory_id).toBe(firstBody.memory.memory_id);
   });
 
+  // Regression: Firebase Auth ID tokens always populate `user_id` with the raw
+  // Firebase UID (a non-UUID string) and silently drop a custom `user_id`
+  // claim. The actor user UUID must be carried in the non-reserved
+  // `actor_user_id` claim, and the API must read it from there for mutations.
+  // See `readActorUserIdClaim` in `app.ts` and docs/infrastructure.md §3.1.
+  it("accepts a Firebase-shape token (UID in user_id, UUID in actor_user_id) for finalize mutations", async () => {
+    const clientId = "192d9eee-42d4-5759-a500-039128431796";
+    const practiceId = "19606221-a569-5f2e-8efb-fd1c5a9f2b99";
+    const actorUserUuid = "2d4dd3b1-d369-54ad-9468-62c660429adb";
+    const firebaseUid = "WeSTbuZqeqOQwkptZS3ZBpxLfgg1";
+    const imageMediaId = randomUUID();
+    const audioMediaId = randomUUID();
+
+    const token = await createToken({
+      user_id: firebaseUid,
+      actor_user_id: actorUserUuid,
+      practice_id: practiceId,
+      client_id: clientId,
+      client_ids: [clientId],
+      roles: ["GUIDE"],
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/v1/clients/${clientId}/memories`,
+      headers: {
+        authorization: `Bearer ${token}`,
+        "idempotency-key": "idem-firebase-claims-shape",
+      },
+      payload: {
+        title: "First memory after sign-in",
+        room: "Living room",
+        body: null,
+        media: [
+          {
+            media_id: imageMediaId,
+            type: "image",
+            storage_key: `${practiceId}/uploads/images/${imageMediaId}`,
+            mime_type: "image/jpeg",
+            byte_size: 80_000,
+            sort_order: 0,
+          },
+          {
+            media_id: audioMediaId,
+            type: "audio",
+            storage_key: `${practiceId}/uploads/audio/${audioMediaId}`,
+            mime_type: "audio/webm",
+            byte_size: 200_000,
+            sort_order: 1,
+          },
+        ],
+      },
+    });
+
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("returns 403 on finalize when actor_user_id is missing and user_id is a non-UUID Firebase UID", async () => {
+    const clientId = "192d9eee-42d4-5759-a500-039128431796";
+    const practiceId = "19606221-a569-5f2e-8efb-fd1c5a9f2b99";
+    const imageMediaId = randomUUID();
+    const audioMediaId = randomUUID();
+
+    const token = await createToken({
+      // No actor_user_id; user_id is a Firebase UID (not a UUID) — must reject.
+      user_id: "WeSTbuZqeqOQwkptZS3ZBpxLfgg1",
+      practice_id: practiceId,
+      client_id: clientId,
+      client_ids: [clientId],
+      roles: ["GUIDE"],
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/v1/clients/${clientId}/memories`,
+      headers: {
+        authorization: `Bearer ${token}`,
+        "idempotency-key": "idem-firebase-claims-missing-actor",
+      },
+      payload: {
+        title: "Should be denied",
+        room: null,
+        body: null,
+        media: [
+          {
+            media_id: imageMediaId,
+            type: "image",
+            storage_key: `${practiceId}/uploads/images/${imageMediaId}`,
+            mime_type: "image/jpeg",
+            byte_size: 50_000,
+            sort_order: 0,
+          },
+          {
+            media_id: audioMediaId,
+            type: "audio",
+            storage_key: `${practiceId}/uploads/audio/${audioMediaId}`,
+            mime_type: "audio/webm",
+            byte_size: 80_000,
+            sort_order: 1,
+          },
+        ],
+      },
+    });
+
+    expect(res.statusCode).toBe(403);
+    const body = JSON.parse(res.body) as { code: string };
+    expect(body.code).toBe("FORBIDDEN");
+  });
+
   it("returns 400 when finalize includes more than one image", async () => {
     const clientId = "f2e22495-16e5-414f-9b15-9f1f1669a56f";
     const practiceId = "77190dae-84bf-4a2f-b7f4-65073b26122b";

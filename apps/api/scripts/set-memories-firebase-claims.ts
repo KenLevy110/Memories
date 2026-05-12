@@ -45,9 +45,15 @@ async function main(): Promise<void> {
   const userId = memoriesUserIdFromFirebaseUid(uid);
   const clientId = memoriesClientIdFromFirebaseUid(uid);
 
+  // Firebase Auth treats `user_id` as a reserved claim and silently drops it
+  // from customAttributes when issuing ID tokens (it always populates `user_id`
+  // and `sub` with the raw Firebase UID instead). The Memories API reads the
+  // actor user via `actor_user_id` (with `user_id` retained as a fallback for
+  // local dev / tests). See `readActorUserIdClaim` in `apps/api/src/app.ts` and
+  // `docs/infrastructure.md` §3.1.
   const claims = {
     practice_id: practiceId,
-    user_id: userId,
+    actor_user_id: userId,
     client_id: clientId,
     client_ids: [clientId],
     roles: ["GUIDE"],

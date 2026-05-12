@@ -56,7 +56,7 @@ To run only one app (for example a second terminal is already running the other)
 
 | Script | Description |
 | --- | --- |
-| `npm run dev` | Clears API/web dev ports, then starts API + web in one terminal ([`concurrently`](https://www.npmjs.com/package/concurrently); prefixed logs `api` / `web`) |
+| `npm run dev` | Uses `scripts/run-dev.mjs` to clear API/web dev ports, then start API + web in one terminal ([`concurrently`](https://www.npmjs.com/package/concurrently); prefixed logs `api` / `web`) |
 | `npm run dev:clean` | Clear common dev ports before startup (API `3000`, web `5173`) |
 | `npm run dev:local-auth` | Localhost JWKS + `/dev/token` mint (**127.0.0.1** only; run alongside `npm run dev` until you wire a real IdP) |
 | `npm run dev:web` | Vite dev server for `apps/web` |

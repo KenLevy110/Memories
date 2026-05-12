@@ -53,6 +53,7 @@ Variables are non-secret configuration toggles (still do not commit policy you c
 | Variable name | Role | Where to obtain | Used by |
 | --- | --- | --- | --- |
 | `MEMORIES_MIGRATE_TLS_INSECURE` | Optional. Set to `false` to require strict TLS certificate verification for `drizzle-kit migrate` from Actions. If unset or not `false`, migrate uses relaxed TLS verification for typical Cloud SQL public-IP setups (see [infrastructure.md](infrastructure.md)) | Set in GitHub → **Actions** → **Variables** when you want strict TLS; omit or leave non-`false` for default migrate behavior | migrate |
+| `WEB_ORIGIN` | **Required.** Comma-separated list of exact browser origins allowed to call the API (CORS allowlist on Cloud Run). Must include the Hosting site origin (e.g. `https://<project>.web.app`) and the `firebaseapp.com` mirror (e.g. `https://<project>.firebaseapp.com`); add custom domains as you bring them up. Without this, the browser blocks API requests from the deployed web app and the UI shows `Network request failed.` | Build from your Hosting domain(s); see [infrastructure.md](infrastructure.md) section 3.1 step 3 | deploy-api |
 
 ---
 

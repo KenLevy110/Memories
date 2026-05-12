@@ -12,6 +12,9 @@
 #   GCP_MEDIA_BUCKET                 memories-prod-media
 #   GCP_SQL_INSTANCE_CONNECTION      PROJECT:REGION:INSTANCE
 #
+# Required repository variable (non-secret; comma-separated browser origins for CORS):
+#   WEB_ORIGIN                       e.g. https://legacy-memories-prod.web.app,https://legacy-memories-prod.firebaseapp.com
+#
 # Triggers: manual dispatch and pushes to main that touch apps/api or shared.
 
 name: Deploy API (Cloud Run)
@@ -68,8 +71,13 @@ jobs:
           RUNTIME_SA: ${{ secrets.GCP_RUNTIME_SA }}
           MEDIA_BUCKET: ${{ secrets.GCP_MEDIA_BUCKET }}
           SQL_INSTANCE: ${{ secrets.GCP_SQL_INSTANCE_CONNECTION }}
+          WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
         run: |
           set -euo pipefail
+          if [ -z "${WEB_ORIGIN}" ]; then
+            echo "::error::Repository variable WEB_ORIGIN is not set. Browser CORS will fail. Set vars.WEB_ORIGIN to a comma-separated list of allowed origins (see docs/infrastructure.md §3.1)."
+            exit 1
+          fi
           gcloud run deploy "$SERVICE" \
             --image="$IMAGE" \
             --region="$REGION" \
@@ -77,7 +85,7 @@ jobs:
             --allow-unauthenticated \
             --service-account="$RUNTIME_SA" \
             --add-cloudsql-instances="$SQL_INSTANCE" \
-            --set-env-vars="NODE_ENV=production,GCS_BUCKET=$MEDIA_BUCKET,LOG_LEVEL=info" \
+            --set-env-vars="^|^NODE_ENV=production|GCS_BUCKET=$MEDIA_BUCKET|LOG_LEVEL=info|WEB_ORIGIN=$WEB_ORIGIN" \
             --set-secrets="DATABASE_URL=DATABASE_URL:latest,JWT_ISSUER=JWT_ISSUER:latest,JWT_AUDIENCE=JWT_AUDIENCE:latest,JWT_JWKS_URI=JWT_JWKS_URI:latest" \
             --cpu=1 \
             --memory=512Mi \

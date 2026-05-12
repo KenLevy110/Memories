@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
-import { render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createAppRouter } from "./router";
 
@@ -45,10 +45,30 @@ function buildFinalizeResponse() {
   };
 }
 
+function buildMemoriesListResponse() {
+  return {
+    items: [
+      {
+        memory_id: "77777777-7777-4777-8777-777777777777",
+        client_id: "8f9512d8-e88f-4f82-a8e9-6cb19a43ad52",
+        practice_id: "11111111-1111-4111-8111-111111111111",
+        title: "Photo + audio memory",
+        room: "Living room",
+        created_at: "2026-04-30T00:00:00.000Z",
+        updated_at: "2026-04-30T00:00:00.000Z",
+        thumbnail_media_id: "88888888-8888-4888-8888-888888888888",
+      },
+    ],
+    next_cursor: null,
+    page_size: 20,
+  };
+}
+
 describe("capture flow smoke", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     window.localStorage.clear();
+    cleanup();
   });
 
   it("completes photo->meta->prompt->record->review->done and sends idempotency header", async () => {
@@ -201,5 +221,116 @@ describe("capture flow smoke", () => {
     await user.click(await screen.findByRole("button", { name: "Choose from Library" }));
 
     expect(await screen.findByRole("status")).toHaveTextContent("Coming Soon — Choose from Library");
+  });
+
+  it("starts a new capture with cleared fields after saving and returning to the list", async () => {
+    window.localStorage.setItem("memories.devBearerToken", "token-for-capture-test");
+    window.history.pushState({}, "", "/clients/8f9512d8-e88f-4f82-a8e9-6cb19a43ad52/capture?step=photo");
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+
+      if (url.endsWith("/api/v1/uploads/images/sign")) {
+        return new Response(
+          JSON.stringify({
+            media_id: "88888888-8888-4888-8888-888888888888",
+            storage_key: "practice/uploads/images/88888888-8888-4888-8888-888888888888",
+            upload_url: "https://uploads.example.com/image",
+            upload_method: "PUT",
+            required_headers: {
+              "content-type": "image/jpeg",
+            },
+            expires_at: "2026-04-30T00:05:00.000Z",
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+
+      if (url.endsWith("/api/v1/uploads/audio/sign")) {
+        return new Response(
+          JSON.stringify({
+            media_id: "99999999-9999-4999-8999-999999999999",
+            storage_key: "practice/uploads/audio/99999999-9999-4999-8999-999999999999",
+            upload_url: "https://uploads.example.com/audio",
+            upload_method: "PUT",
+            required_headers: {
+              "content-type": "audio/webm",
+            },
+            expires_at: "2026-04-30T00:05:00.000Z",
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+
+      if (url === "https://uploads.example.com/image" || url === "https://uploads.example.com/audio") {
+        return new Response(null, { status: 200 });
+      }
+
+      if (
+        method === "POST" &&
+        url === "http://localhost:8787/api/v1/clients/8f9512d8-e88f-4f82-a8e9-6cb19a43ad52/memories"
+      ) {
+        return new Response(JSON.stringify(buildFinalizeResponse()), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+
+      if (
+        method === "GET" &&
+        url === "http://localhost:8787/api/v1/clients/8f9512d8-e88f-4f82-a8e9-6cb19a43ad52/memories"
+      ) {
+        return new Response(JSON.stringify(buildMemoriesListResponse()), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+
+      throw new Error(`Unexpected fetch request: ${url} (${method})`);
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
+    const router = createAppRouter();
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    );
+
+    const user = userEvent.setup();
+
+    const firstPhotoInput = await screen.findByLabelText("Photo");
+    await user.upload(firstPhotoInput, new File(["img"], "photo.jpg", { type: "image/jpeg" }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.type(await screen.findByLabelText("Object title"), "Grandpa's watch");
+    await user.type(screen.getByLabelText("Room"), "Living room");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Continue to recording" }));
+    const audioInput = await screen.findByLabelText("Audio fallback");
+    await user.upload(audioInput, new File(["aud"], "clip.webm", { type: "audio/webm" }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: /Save to .+'s Archive/ }));
+    await screen.findByRole("heading", { name: "Memory saved" });
+
+    await user.click(screen.getByRole("link", { name: "Return to list" }));
+    await screen.findByRole("heading", { name: "Memories" });
+    await user.click(screen.getByRole("link", { name: /\+ Capture memory/ }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
+    });
+
+    const secondPhotoInput = await screen.findByLabelText("Photo");
+    await user.upload(secondPhotoInput, new File(["img2"], "photo-2.jpg", { type: "image/jpeg" }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    expect(await screen.findByLabelText("Object title")).toHaveValue("");
+    expect(screen.getByLabelText("Room")).toHaveValue("");
   });
 });

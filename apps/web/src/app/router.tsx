@@ -561,6 +561,26 @@ function CapturePage() {
     };
   }, []);
 
+  function resetCaptureInputs(): void {
+    setTitle("");
+    setRoom("");
+    setImageBlob(null);
+    setImageMimeType(null);
+    setAudioBlob(null);
+    setAudioMimeType(null);
+    setIdempotencyKey(null);
+    setIsRecording(false);
+    setRecordingError(null);
+  }
+
+  async function resetCaptureForNextMemory(): Promise<void> {
+    resetCaptureInputs();
+    setSaveError(null);
+    setSaveMessage(null);
+    setLastSavedMemoryId(null);
+    await clearCaptureDraft(clientId);
+  }
+
   function goToStep(nextStep: CaptureStep): void {
     void navigate({ search: { step: nextStep } });
   }
@@ -664,6 +684,7 @@ function CapturePage() {
         const detail = await finalizeMemory(clientId, finalizeRequest, resolvedIdempotencyKey);
         setLastSavedMemoryId(detail.memory.memory_id);
         setSaveMessage("Memory saved.");
+        resetCaptureInputs();
         await clearCaptureDraft(clientId);
         await queryClient.invalidateQueries({ queryKey: ["memories", clientId] });
         goToStep("done");
@@ -674,7 +695,10 @@ function CapturePage() {
             idempotencyKey: resolvedIdempotencyKey,
             request: finalizeRequest,
           });
+          setLastSavedMemoryId(null);
           setSaveMessage("Offline-safe queue: save will retry automatically.");
+          resetCaptureInputs();
+          await clearCaptureDraft(clientId);
           goToStep("done");
           return;
         }
@@ -1000,14 +1024,7 @@ function CapturePage() {
               type="button"
               className="capture-primary"
               onClick={async () => {
-                setTitle("");
-                setRoom("");
-                setImageBlob(null);
-                setImageMimeType(null);
-                setAudioBlob(null);
-                setAudioMimeType(null);
-                setIdempotencyKey(null);
-                await clearCaptureDraft(clientId);
+                await resetCaptureForNextMemory();
                 goToStep("photo");
               }}
             >

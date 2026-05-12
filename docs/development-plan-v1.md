@@ -11,15 +11,15 @@ For template structure and section intent, see [development-plan-template.md](te
 ## 1. Document control
 
 
-| Field             | Value                                                                                 |
-| ----------------- | ------------------------------------------------------------------------------------- |
-| **Title**         | Memories — development plan                                                           |
-| **Version**       | 1.9                                                                                   |
-| **Author**        | Ken Levy                                                                              |
-| **Date**          | 2026-05-07                                                                            |
-| **Status**        | Draft                                                                                 |
+| Field             | Value                                                                                                                                    |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **Title**         | Memories — development plan                                                                                                              |
+| **Version**       | 1.9                                                                                                                                      |
+| **Author**        | Ken Levy                                                                                                                                 |
+| **Date**          | 2026-05-07                                                                                                                               |
+| **Status**        | Draft                                                                                                                                    |
 | **Release**       | Staged: **0.5** (first prod slice) → **0.5.1-demo** (optional UX demo) → **0.5.2** (capture visual polish) → **0.6–1.0** (see Section 7) |
-| **Template used** | [docs/templates/development-plan-template.md](templates/development-plan-template.md) |
+| **Template used** | [docs/templates/development-plan-template.md](templates/development-plan-template.md)                                                    |
 
 
 Per [documentation governance](../.cursor/rules/docs-governance.mdc), derived documents record **Template used** (included above).
@@ -29,18 +29,18 @@ Per [documentation governance](../.cursor/rules/docs-governance.mdc), derived do
 ## 2. Linked inputs
 
 
-| Artifact                        | Location                                                                                  |
-| ------------------------------- | ----------------------------------------------------------------------------------------- |
-| **PRD**                         | [product-requirements-v1.md](product-requirements-v1.md) v1.5                             |
-| **Technical design**            | [technical-design-v1.md](technical-design-v1.md) v1.5                                     |
-| **Wireframes**                  | [design-wireframe-v1.md](design-wireframe-v1.md)                                          |
-| **User workflow**               | [memories-user-workflow-v1.md](memories-user-workflow-v1.md)                              |
-| **Tech stack**                  | [tech-stack.md](tech-stack.md)                                                            |
-| **Implementation log**          | [implementation-log.md](implementation-log.md)                                            |
-| **Runbook**                     | — (add `docs/runbook.md` when operator steps and on-call playbooks are defined)           |
-| **ADR index**                   | [adr/README.md](adr/README.md)                                                            |
-| **Baseline / superseded plans** | — (link prior `development-plan-v*.md` here when superseded)                              |
-| **Execution status** (optional) | —                                                                                         |
+| Artifact                        | Location                                                                        |
+| ------------------------------- | ------------------------------------------------------------------------------- |
+| **PRD**                         | [product-requirements-v1.md](product-requirements-v1.md) v1.5                   |
+| **Technical design**            | [technical-design-v1.md](technical-design-v1.md) v1.5                           |
+| **Wireframes**                  | [design-wireframe-v1.md](design-wireframe-v1.md)                                |
+| **User workflow**               | [memories-user-workflow-v1.md](memories-user-workflow-v1.md)                    |
+| **Tech stack**                  | [tech-stack.md](tech-stack.md)                                                  |
+| **Implementation log**          | [implementation-log.md](implementation-log.md)                                  |
+| **Runbook**                     | — (add `docs/runbook.md` when operator steps and on-call playbooks are defined) |
+| **ADR index**                   | [adr/README.md](adr/README.md)                                                  |
+| **Baseline / superseded plans** | — (link prior `development-plan-v*.md` here when superseded)                    |
+| **Execution status** (optional) | —                                                                               |
 
 
 ---
@@ -86,8 +86,8 @@ Per [documentation governance](../.cursor/rules/docs-governance.mdc), derived do
 | **FR-018** `sharing_visibility` (P2)                  | Schema may reserve field in **T2**; product behavior deferred unless pulled forward                                               | **Later**                                               |
 | Video recording (workflow screenshots show alternate) | No                                                                                                                                | **0.9**                                                 |
 
-**Stage 0.5.2 (optional):** **Web only** — closer **hi-fi-adjacent** capture styling toward [memories-user-workflow-v1.md](memories-user-workflow-v1.md) / `docs/assets/workflow-screenshots/` (mobile card shell, warm prompt card, photo well, pill CTAs, circular mic control, success state). **No** API or finalize rule changes; tag **`v0.5.2`** when cutting a build after this polish.
 
+**Stage 0.5.2 (optional):** **Web only** — closer **hi-fi-adjacent** capture styling toward [memories-user-workflow-v1.md](memories-user-workflow-v1.md) / `docs/assets/workflow-screenshots/` (mobile card shell, warm prompt card, photo well, pill CTAs, circular mic control, success state). **No** API or finalize rule changes; tag `**v0.5.2`** when cutting a build after this polish.
 
 ---
 
@@ -131,7 +131,7 @@ Per [documentation governance](../.cursor/rules/docs-governance.mdc), derived do
 | **E2**  | AuthN / authZ / audit baseline                          | JWT verification, client binding, denial logging, `audit_events` append                                                                                                                                                  | **FR-012**, **FR-019**, **NFR-008**                   |
 | **E3**  | Persistence & memory CRUD                               | Drizzle schema, migrations, CRUD + idempotent create                                                                                                                                                                     | **FR-001**–**FR-004**, **FR-010**, **FR-013**         |
 | **E4**  | Upload & playback signing                               | Image/audio sign PUT, signed read for playback                                                                                                                                                                           | **FR-005**, **FR-006**, **FR-011**, **NFR-002**       |
-| **E5**  | Web v0.5 capture & list                                 | Single photo + recorded audio stepper, IndexedDB draft, list/detail; optional **T25** (**0.5.1-demo**) workflow-aligned UI + **Coming Soon** stubs                                                                                      | **FR-002**, **FR-007**, **FR-014**, **NFR-012**       |
+| **E5**  | Web v0.5 capture & list                                 | Single photo + recorded audio stepper, IndexedDB draft, list/detail; optional **T25** (**0.5.1-demo**) workflow-aligned UI + **Coming Soon** stubs                                                                       | **FR-002**, **FR-007**, **FR-014**, **NFR-012**       |
 | **E6**  | Production readiness                                    | Health, structured logging, alerting hooks, E2E/smoke paths                                                                                                                                                              | **NFR-003**, **NFR-006**, **NFR-010**                 |
 | **E7**  | Multi-image                                             | Multiple `MemoryMedia` images, ordering, UI gallery                                                                                                                                                                      | **FR-005**, **FR-011**                                |
 | **E8**  | Upload audio file                                       | Library/file path + validation alongside recorder                                                                                                                                                                        | **FR-006**                                            |
@@ -146,33 +146,33 @@ Per [documentation governance](../.cursor/rules/docs-governance.mdc), derived do
 Reviewer legend: **Sr** = senior, **Sec** = security-sensitive, **QA** = QA primary, **Manual** = product/lead sign-off.
 
 
-| Ticket  | Title                                                                                                                             | Epic | Depends on                               | Owner lane           | Primary reviewers | Estimate |
-| ------- | --------------------------------------------------------------------------------------------------------------------------------- | ---- | ---------------------------------------- | -------------------- | ----------------- | -------- |
-| **T1**  | Shared Zod contracts for memory, media, errors, pagination                                                                        | E1   | —                                        | Shared               | Sr                | S        |
-| **T2**  | Drizzle schema + migrations: memories, memory_media, audit_events, transcript/jobs stubs                                          | E3   | T1                                       | Backend + DB         | Sr                | M        |
-| **T3**  | Fastify API shell: versioning, correlation id, JWT verify (JWKS config)                                                           | E2   | T1                                       | Backend              | Sr, Sec           | M        |
-| **T4**  | Authz middleware: `clientId` + memoryId binding to JWT; 403 telemetry                                                             | E2   | T3                                       | Backend              | Sr, Sec           | M        |
-| **T5**  | `POST /api/v1/uploads/images/sign` (limits, MIME)                                                                                 | E4   | T3, T4                                   | Backend              | Sec               | M        |
-| **T6**  | `POST /api/v1/uploads/audio/sign`                                                                                                 | E4   | T3, T4                                   | Backend              | Sec               | S        |
-| **T7**  | `POST /api/v1/memory-media/:mediaId/sign-read`                                                                                    | E4   | T2, T3, T4                               | Backend              | Sec               | M        |
-| **T8**  | `POST /api/v1/clients/:clientId/memories` idempotent finalize + **0.5 rule: max 1 image + 1 audio**                               | E3   | T2, T5, T6, T4                           | Backend + DB         | Sr, Sec           | L        |
-| **T9**  | `GET` list + detail, `PATCH`, `DELETE` (soft) + audit on mutations                                                                | E3   | T8                                       | Backend + DB         | Sr                | L        |
-| **T10** | Web: router shell, list **ML1**, detail playback via signed URLs                                                                  | E5   | T9, T7                                   | Frontend UI + sync   | QA                | L        |
-| **T11** | Web: capture stepper **0.5** (photo, meta, static/skip prompt, record, review, done)                                              | E5   | T10, T5, T6, T8                          | Frontend UI + sync   | QA                | L        |
-| **T12** | IndexedDB draft + retry queue + idempotency header on finalize                                                                    | E5   | T11                                      | Frontend data sync   | Sr                | M        |
-| **T13** | Observability: pino JSON metadata-only logs, `/health`, alert metric hooks doc                                                    | E6   | T3                                       | Backend + manager    | —                 | M        |
-| **T14** | Automated tests: API authz + idempotency; web critical path; Playwright smoke                                                     | E6   | T9, T11                                  | Testing              | QA                | L        |
+| Ticket  | Title                                                                                                                                    | Epic | Depends on                               | Owner lane           | Primary reviewers | Estimate |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ---- | ---------------------------------------- | -------------------- | ----------------- | -------- |
+| **T1**  | Shared Zod contracts for memory, media, errors, pagination                                                                               | E1   | —                                        | Shared               | Sr                | S        |
+| **T2**  | Drizzle schema + migrations: memories, memory_media, audit_events, transcript/jobs stubs                                                 | E3   | T1                                       | Backend + DB         | Sr                | M        |
+| **T3**  | Fastify API shell: versioning, correlation id, JWT verify (JWKS config)                                                                  | E2   | T1                                       | Backend              | Sr, Sec           | M        |
+| **T4**  | Authz middleware: `clientId` + memoryId binding to JWT; 403 telemetry                                                                    | E2   | T3                                       | Backend              | Sr, Sec           | M        |
+| **T5**  | `POST /api/v1/uploads/images/sign` (limits, MIME)                                                                                        | E4   | T3, T4                                   | Backend              | Sec               | M        |
+| **T6**  | `POST /api/v1/uploads/audio/sign`                                                                                                        | E4   | T3, T4                                   | Backend              | Sec               | S        |
+| **T7**  | `POST /api/v1/memory-media/:mediaId/sign-read`                                                                                           | E4   | T2, T3, T4                               | Backend              | Sec               | M        |
+| **T8**  | `POST /api/v1/clients/:clientId/memories` idempotent finalize + **0.5 rule: max 1 image + 1 audio**                                      | E3   | T2, T5, T6, T4                           | Backend + DB         | Sr, Sec           | L        |
+| **T9**  | `GET` list + detail, `PATCH`, `DELETE` (soft) + audit on mutations                                                                       | E3   | T8                                       | Backend + DB         | Sr                | L        |
+| **T10** | Web: router shell, list **ML1**, detail playback via signed URLs                                                                         | E5   | T9, T7                                   | Frontend UI + sync   | QA                | L        |
+| **T11** | Web: capture stepper **0.5** (photo, meta, static/skip prompt, record, review, done)                                                     | E5   | T10, T5, T6, T8                          | Frontend UI + sync   | QA                | L        |
+| **T12** | IndexedDB draft + retry queue + idempotency header on finalize                                                                           | E5   | T11                                      | Frontend data sync   | Sr                | M        |
+| **T13** | Observability: pino JSON metadata-only logs, `/health`, alert metric hooks doc                                                           | E6   | T3                                       | Backend + manager    | —                 | M        |
+| **T14** | Automated tests: API authz + idempotency; web critical path; Playwright smoke                                                            | E6   | T9, T11                                  | Testing              | QA                | L        |
 | **T25** | **Stage 0.5.1-demo** — workflow-doc capture UX + **Coming Soon** placeholders for **0.6–1.0** controls (**0.5** API semantics unchanged) | E5   | T14                                      | Frontend UI          | QA                | S        |
-| **T15** | **Stage 0.6** — multi-image: raise limits, sort_order, UI add/remove                                                              | E7   | T8, T9, T10, T11                         | Full stack           | Sr, QA            | L        |
-| **T16** | **Stage 0.7** — upload audio file path (picker) + signer constraints                                                              | E8   | T6, T11                                  | Frontend + backend   | QA                | M        |
-| **T17** | **Stage 0.8** — transcription worker + `GET …/transcript` + detail poll                                                           | E9   | T2, T8, T9                               | Backend + DB         | Sr, Sec           | L        |
-| **T18** | **Stage 0.8** — transcript UI states (pending/ready/failed)                                                                       | E9   | T17, T10                                 | Frontend             | QA                | M        |
-| **T19** | **Stage 0.9** — video: sign endpoint, `MediaRecorder` video, storage type                                                         | E10  | T4, T5 pattern                           | Full stack           | Sr, QA            | L        |
-| **T20** | **Stage 1.0** — `POST …/suggest_prompt` + timeout/fallback + wire `?step=prompt`                                                  | E11  | T3, T4                                   | Backend + AI adapter | Sec               | M        |
-| **T21** | **Stage 1.0** — tags on create/update (no auto suggest until **FR-016**)                                                          | E11  | T9                                       | Full stack           | —                 | M        |
-| **T22** | Release checklist: staging → prod, flags, synthetic PHI policy, manual matrix sign-off                                            | E6   | T14                                      | Manager + QA         | Manual            | S        |
-| **T23** | **FR-017** — Comments/reactions API + detail UI (matrix + audit); blocked until Dashboard JWT encodes Appendix A roles/visibility | E12  | T9; **blocked:** JWT schema + PM go      | Full stack           | Sr, Sec, QA       | L        |
-| **T24** | **FR-018** — Persist and enforce `**sharing_visibility`** (and UX to set it); may trail **T23**                                   | E12  | T23; **blocked:** FR-017 scope agreement | Full stack           | Sr, QA            | M        |
+| **T15** | **Stage 0.6** — multi-image: raise limits, sort_order, UI add/remove                                                                     | E7   | T8, T9, T10, T11                         | Full stack           | Sr, QA            | L        |
+| **T16** | **Stage 0.7** — upload audio file path (picker) + signer constraints                                                                     | E8   | T6, T11                                  | Frontend + backend   | QA                | M        |
+| **T17** | **Stage 0.8** — transcription worker + `GET …/transcript` + detail poll                                                                  | E9   | T2, T8, T9                               | Backend + DB         | Sr, Sec           | L        |
+| **T18** | **Stage 0.8** — transcript UI states (pending/ready/failed)                                                                              | E9   | T17, T10                                 | Frontend             | QA                | M        |
+| **T19** | **Stage 0.9** — video: sign endpoint, `MediaRecorder` video, storage type                                                                | E10  | T4, T5 pattern                           | Full stack           | Sr, QA            | L        |
+| **T20** | **Stage 1.0** — `POST …/suggest_prompt` + timeout/fallback + wire `?step=prompt`                                                         | E11  | T3, T4                                   | Backend + AI adapter | Sec               | M        |
+| **T21** | **Stage 1.0** — tags on create/update (no auto suggest until **FR-016**)                                                                 | E11  | T9                                       | Full stack           | —                 | M        |
+| **T22** | Release checklist: staging → prod, flags, synthetic PHI policy, manual matrix sign-off                                                   | E6   | T14                                      | Manager + QA         | Manual            | S        |
+| **T23** | **FR-017** — Comments/reactions API + detail UI (matrix + audit); blocked until Dashboard JWT encodes Appendix A roles/visibility        | E12  | T9; **blocked:** JWT schema + PM go      | Full stack           | Sr, Sec, QA       | L        |
+| **T24** | **FR-018** — Persist and enforce `**sharing_visibility`** (and UX to set it); may trail **T23**                                          | E12  | T23; **blocked:** FR-017 scope agreement | Full stack           | Sr, QA            | M        |
 
 
 **Definition of ready — T23 / T24:** (1) Written JWT claim names and role matrix from Dashboard (**FR-012** analog). (2) PM sign-off that autonomous family **create/delete** remain **out** unless PRD + Appendix A change. (3) Wireframes/design update for comment thread if not covered by existing **MC**/detail states.
@@ -186,18 +186,18 @@ Reviewer legend: **Sr** = senior, **Sec** = security-sensitive, **QA** = QA prim
 Stages are **product semantics**; map to git/CI as **tags** or release notes (`v0.5.0`, …).
 
 
-| Stage     | Milestone outcome                                                                                                            | Ticket IDs (minimum)                                                                       | Production note                                                            |
-| --------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
-| **0.5**   | **First production-capable slice:** 1 image + 1 recorded audio; list/detail; authz; offline retry; no transcription required | T1–T14 (exclude T15+)                                                                      | Enable after **Manual** matrix (Section 12.5); STT **off** or not deployed |
-| **0.5.1-demo** | **Internal demo UX:** [memories-user-workflow-v1.md](memories-user-workflow-v1.md)-aligned capture chrome; **Coming Soon** stubs for **T15–T21** surfaces | **T25** (optional; **after** T14)                                                          | **Does not** lift finalize media limits; tag **`v0.5.1-demo`** for stakeholder builds |
-| **0.5.2**   | **Capture visual polish:** hi-fi-adjacent styling (screenshot-inspired); same **0.5** behavior | Web-only follow-up to **T25**                                                            | Tag **`v0.5.2`**; not a new capability stage                               |
-| **0.6**   | Multiple images per memory                                                                                                   | T15                                                                                        | Backward compatible API                                                    |
-| **0.7**   | Audio file upload                                                                                                            | T16                                                                                        | Complements recorder                                                       |
-| **0.8**   | Transcription jobs + poll + UI states                                                                                        | T17, T18                                                                                   | Requires BAA-gated vendor for real PHI                                     |
-| **0.9**   | Video capture + playback                                                                                                     | T19                                                                                        | New media MIME paths                                                       |
-| **1.0**   | PRD-aligned v1 polish: AI prompt path + curator tags                                                                         | T20, T21                                                                                   | Feature-flag LLM per env                                                   |
-| **Ops**   | Staging/prod parity checklist                                                                                                | T22                                                                                        | Every stage                                                                |
-| **Later** | **FR-017** / **FR-018** social + visibility (**E12**)                                                                        | **T23**, **T24** (not in stages **0.5–1.0** until **Definition of ready** in §6.2 cleared) | Enable when platform JWT + PRD gates satisfied                             |
+| Stage          | Milestone outcome                                                                                                                                         | Ticket IDs (minimum)                                                                       | Production note                                                                       |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| **0.5**        | **First production-capable slice:** 1 image + 1 recorded audio; list/detail; authz; offline retry; no transcription required                              | T1–T14 (exclude T15+)                                                                      | Enable after **Manual** matrix (Section 12.5); STT **off** or not deployed            |
+| **0.5.1-demo** | **Internal demo UX:** [memories-user-workflow-v1.md](memories-user-workflow-v1.md)-aligned capture chrome; **Coming Soon** stubs for **T15–T21** surfaces | **T25** (optional; **after** T14)                                                          | **Does not** lift finalize media limits; tag `**v0.5.1-demo`** for stakeholder builds |
+| **0.5.2**      | **Capture visual polish:** hi-fi-adjacent styling (screenshot-inspired); same **0.5** behavior                                                            | Web-only follow-up to **T25**                                                              | Tag `**v0.5.2`**; not a new capability stage                                          |
+| **0.6**        | Multiple images per memory                                                                                                                                | T15                                                                                        | Backward compatible API                                                               |
+| **0.7**        | Audio file upload                                                                                                                                         | T16                                                                                        | Complements recorder                                                                  |
+| **0.8**        | Transcription jobs + poll + UI states                                                                                                                     | T17, T18                                                                                   | Requires BAA-gated vendor for real PHI                                                |
+| **0.9**        | Video capture + playback                                                                                                                                  | T19                                                                                        | New media MIME paths                                                                  |
+| **1.0**        | PRD-aligned v1 polish: AI prompt path + curator tags                                                                                                      | T20, T21                                                                                   | Feature-flag LLM per env                                                              |
+| **Ops**        | Staging/prod parity checklist                                                                                                                             | T22                                                                                        | Every stage                                                                           |
+| **Later**      | **FR-017** / **FR-018** social + visibility (**E12**)                                                                                                     | **T23**, **T24** (not in stages **0.5–1.0** until **Definition of ready** in §6.2 cleared) | Enable when platform JWT + PRD gates satisfied                                        |
 
 
 ### 7.2 Parallel track guidance
@@ -243,7 +243,7 @@ Quality gates:
 ## 9. Rollout and operations
 
 1. **Stage 0.5:** deploy API + web to staging; run **T14** automation + Section 12.5 manual matrix; enable production with **transcription disabled** and **static prompt** only.
-2. **Stage 0.5.1-demo:** optional tag (**`v0.5.1-demo`**) for employee-facing demos—same API/security posture as **0.5**; UI-only alignment per **T25** (see Section 4 **Stage 0.5.1-demo**).
+2. **Stage 0.5.1-demo:** optional tag (`**v0.5.1-demo`**) for employee-facing demos—same API/security posture as **0.5**; UI-only alignment per **T25** (see Section 4 **Stage 0.5.1-demo**).
 3. **Feature flags / config:** `STT_ENABLED`, `LLM_PROMPT_ENABLED`, `MAX_IMAGES` (1 → N), `VIDEO_ENABLED`—exact names are implementation details; document in [implementation-log.md](implementation-log.md).
 4. **Monitoring:** wire dashboards per [technical-design-v1.md](technical-design-v1.md) §3.3; **threshold seeds** live in **§5.1** (tune post-baseline).
 5. **Health / readiness:** confirm load-balancer probes target `**GET /health`** and authenticated canary parameters match TDD when production canaries are added.
@@ -273,27 +273,27 @@ Quality gates:
 ## 11. Traceability summary
 
 
-| PRD / TDD focus                                        | Tickets                                                                                                               |
-| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| **FR-001**–**FR-004**, **FR-010**, **FR-013**          | T2, T8, T9                                                                                                            |
-| **FR-005**, **FR-011**                                 | T5, T8, T11, **T15**                                                                                                  |
-| **FR-006**                                             | T6, T11, **T16**                                                                                                      |
-| **FR-007**, **NFR-012**                                | T11                                                                                                                   |
-| **FR-008**, **FR-009**                                 | **T17**, **T18**                                                                                                      |
-| **FR-012**, **NFR-008**                                | T3, T4                                                                                                                |
-| **FR-014**                                             | T11, T12                                                                                                              |
-| **FR-015**                                             | **T20**                                                                                                               |
-| **FR-016** (groundwork)                                | **T21**                                                                                                               |
-| **FR-019**                                             | T2, T8, T9                                                                                                            |
-| **FR-017**                                             | **T23** (blocked—§6.2 **Definition of ready**); tables stubbed per TDD §5 until epic runs                             |
-| **FR-018**                                             | **T24** (blocked—after **T23** + product); column may ship with **T2** schema only until behavior lands               |
-| **NFR-001** (HTTPS prod)                               | Infra/hosting—verify in **T22** rollout + environment config (not Memories-only ticket)                               |
-| **NFR-004**, **NFR-012** (a11y + elder UX)             | T11, T15 (UX review), **T25** (demo chrome), **§12.5–12.6**; wireframe states per [design-wireframe-v1.md](design-wireframe-v1.md)           |
-| **NFR-006**                                            | T13                                                                                                                   |
-| **NFR-010**                                            | T13 (**hooks**); **§5.1** (**threshold defaults**); **implementation-log** (**owners + metric IDs** after dashboards) |
-| **NFR-007** (BAAs)                                     | Rollout **§9**, **T22**; blocks real PHI in prod vendors                                                              |
-| Demo UX (**0.5.1-demo**)                               | **T25**                                                                                                               |
-| Video (multimedia; not telephony—see PRD out-of-scope) | **T19**                                                                                                               |
+| PRD / TDD focus                                        | Tickets                                                                                                                            |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **FR-001**–**FR-004**, **FR-010**, **FR-013**          | T2, T8, T9                                                                                                                         |
+| **FR-005**, **FR-011**                                 | T5, T8, T11, **T15**                                                                                                               |
+| **FR-006**                                             | T6, T11, **T16**                                                                                                                   |
+| **FR-007**, **NFR-012**                                | T11                                                                                                                                |
+| **FR-008**, **FR-009**                                 | **T17**, **T18**                                                                                                                   |
+| **FR-012**, **NFR-008**                                | T3, T4                                                                                                                             |
+| **FR-014**                                             | T11, T12                                                                                                                           |
+| **FR-015**                                             | **T20**                                                                                                                            |
+| **FR-016** (groundwork)                                | **T21**                                                                                                                            |
+| **FR-019**                                             | T2, T8, T9                                                                                                                         |
+| **FR-017**                                             | **T23** (blocked—§6.2 **Definition of ready**); tables stubbed per TDD §5 until epic runs                                          |
+| **FR-018**                                             | **T24** (blocked—after **T23** + product); column may ship with **T2** schema only until behavior lands                            |
+| **NFR-001** (HTTPS prod)                               | Infra/hosting—verify in **T22** rollout + environment config (not Memories-only ticket)                                            |
+| **NFR-004**, **NFR-012** (a11y + elder UX)             | T11, T15 (UX review), **T25** (demo chrome), **§12.5–12.6**; wireframe states per [design-wireframe-v1.md](design-wireframe-v1.md) |
+| **NFR-006**                                            | T13                                                                                                                                |
+| **NFR-010**                                            | T13 (**hooks**); **§5.1** (**threshold defaults**); **implementation-log** (**owners + metric IDs** after dashboards)              |
+| **NFR-007** (BAAs)                                     | Rollout **§9**, **T22**; blocks real PHI in prod vendors                                                                           |
+| Demo UX (**0.5.1-demo**)                               | **T25**                                                                                                                            |
+| Video (multimedia; not telephony—see PRD out-of-scope) | **T19**                                                                                                                            |
 
 
 ---
@@ -618,15 +618,15 @@ Workspaces use `**@memories/web`** and `**@memories/api`** (see root `package.js
 **Merge-ready expectation (non-trivial work):** green CI with `npm run lint`, `npm run typecheck`, and `npm run test` (including coverage floors in [AGENTS.md](../AGENTS.md)); `developer-code-quality` checklist complete before review; apply `developer-senior`, `developer-security`, and `developer-quality-assurance` wherever the reviewer column and risk profile require.
 
 
-| Epic      | Includes tickets | Primary reviewers                                       | Epic done gate                                                                                                                                       |
-| --------- | ---------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Epic      | Includes tickets                                           | Primary reviewers                                       | Epic done gate                                                                                                                                       |
+| --------- | ---------------------------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **E1–E6** | T1–T14, T22 (+ optional **T25** for **0.5.1-demo** builds) | Sr/Sec/QA per §6.2 reviewer column; code-quality always | Stage **0.5** rows in §12.5 are signed off **and** T22 release checklist complete; CI green with coverage floors; authz/audit/no-PHI-log checks pass |
-| **E7**    | T15              | Sr, QA                                                  | Multi-image UX approved                                                                                                                              |
-| **E8**    | T16              | QA                                                      | Upload + record both work                                                                                                                            |
-| **E9**    | T17,T18          | Sr, QA, Sec (vendor)                                    | Transcript states correct                                                                                                                            |
-| **E10**   | T19              | Sr, QA                                                  | Video on supported devices documented                                                                                                                |
-| **E11**   | T20,T21          | Sec                                                     | Prompt/tags behind flags                                                                                                                             |
-| **E12**   | T23,T24          | Sr, QA, Sec                                             | **§6.2 Definition of ready** satisfied; Appendix A JWT parity; CI + manual §12.5 “Later” row                                                         |
+| **E7**    | T15                                                        | Sr, QA                                                  | Multi-image UX approved                                                                                                                              |
+| **E8**    | T16                                                        | QA                                                      | Upload + record both work                                                                                                                            |
+| **E9**    | T17,T18                                                    | Sr, QA, Sec (vendor)                                    | Transcript states correct                                                                                                                            |
+| **E10**   | T19                                                        | Sr, QA                                                  | Video on supported devices documented                                                                                                                |
+| **E11**   | T20,T21                                                    | Sec                                                     | Prompt/tags behind flags                                                                                                                             |
+| **E12**   | T23,T24                                                    | Sr, QA, Sec                                             | **§6.2 Definition of ready** satisfied; Appendix A JWT parity; CI + manual §12.5 “Later” row                                                         |
 
 
 ### 12.5 Manual test execution matrix
@@ -634,22 +634,22 @@ Workspaces use `**@memories/web`** and `**@memories/api`** (see root `package.js
 **How to use this matrix:** Rows are ordered **roughly** by dependency (API spine → signing → CRUD → web shell → capture → hardening). **Related tickets** names every ticket whose work the **Steps** assume; treat the row as **runnable and sign-offable only after all** of those tickets are merged (for example **T4,T9** needs list/detail routes from **T9**, not authz alone from **T4**). **Sign off** in the **Sign-off** column when **Steps** pass in a suitable environment (local, staging, or ephemeral). **Stage 0.5** production still requires **every** **0.5** row below **and** the **T22** release checklist—not only the capture row. Rows without **T10**–**T12** may use **REST** or **curl** / API client plus seeded or synthetic JWTs; **T10**+ rows exercise the browser.
 
 
-| Epic      | Scenario                                  | Related tickets | Steps                                                                                                      | Expected result                                                | Sign-off      |
-| --------- | ----------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | ------------- |
-| **0.5**   | Protected routes reject bad / missing JWT | T3              | Omit `Authorization` or send malformed token on a protected `/api/v1/…` route; call `/health` without auth | Protected routes rejected per contract; `/health` 200          | Ken 4/30      |
-| **0.5**   | API `client_id` / memory authz (403)      | T4,T9           | Valid JWT; `GET` list or `GET` detail for another tenant’s `client_id` or unrelated `memory_id`            | **403**; error body has no PHI (**NFR-008**)                   | Ken 4/30      |
-| **0.5**   | Image + audio **upload** sign URLs        | T5,T6           | `POST` sign endpoints; exercise oversize / disallowed MIME where safe                                      | Policy enforced; URLs usable only for intended upload          | Ken 4/30      |
-| **0.5**   | List, detail, **PATCH**, soft **DELETE**  | T9              | Cursor list, detail with media refs, allowed **PATCH**, **DELETE**                                         | Contract + audit behavior per TDD; soft delete visible in list | Ken 5/5       |
-| **0.5**   | Playback **sign-read**                    | T7,T9           | `POST` sign-read for allowed `mediaId`; repeat for media outside caller’s scope                            | Time-limited read URL for allowed; **403** for denied          | Skipped       |
-| **0.5**   | Web list + detail + playback              | T10,T7,T9       | With test JWT: open list → detail → start playback (memory may be created via API or prior seed)           | Playback works; empty/loading/error states sane                | Manual / date |
-| **0.5**   | Web cross-client isolation                | T4,T10          | As user A, open user B’s `client_id` route (deep link or tampered segment)                                 | **403** or safe blocked UX; no other tenant data               | Skipped       |
-| **0.5**   | Guided capture saves one memory           | T11,T12,T14     | Complete photo → meta → record → save; airplane mode mid-save → resume                                     | Exactly one DB row; playback works                             | Manual / date |
-| **0.5.1-demo** | Workflow chrome + Coming Soon stubs       | T25,T11,T12,T14 | Same golden path as **0.5**; tap each deferred control (multi-photo, library audio, video, tags, transcript cues) | **Coming Soon** surfaces only; finalize still **1 image + 1 audio** | Manual / date |
-| **0.6**   | Multiple photos                           | T15             | Attach 3 images reorder                                                                                    | Ordering persisted                                             | Manual / date |
-| **0.7**   | Upload audio file                         | T16             | Pick file, save                                                                                            | Playback matches record path                                   | Manual / date |
-| **0.8**   | Transcription                             | T17,T18         | Record audio; poll until ready                                                                             | Text appears; failures readable                                | Manual / date |
-| **0.9**   | Video                                     | T19             | Capture short clip                                                                                         | Playback OK on target devices                                  | Manual / date |
-| **Later** | **FR-017** / **FR-018** (when unblocked)  | T23,T24         | Role-appropriate comment add/read; denial for wrong role; set visibility → family sees per policy          | Matches Appendix A + PRD; no PHI in notifications              | Manual / date |
+| Epic           | Scenario                                  | Related tickets | Steps                                                                                                             | Expected result                                                     | Sign-off      |
+| -------------- | ----------------------------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------- |
+| **0.5**        | Protected routes reject bad / missing JWT | T3              | Omit `Authorization` or send malformed token on a protected `/api/v1/…` route; call `/health` without auth        | Protected routes rejected per contract; `/health` 200               | Ken 4/30      |
+| **0.5**        | API `client_id` / memory authz (403)      | T4,T9           | Valid JWT; `GET` list or `GET` detail for another tenant’s `client_id` or unrelated `memory_id`                   | **403**; error body has no PHI (**NFR-008**)                        | Ken 4/30      |
+| **0.5**        | Image + audio **upload** sign URLs        | T5,T6           | `POST` sign endpoints; exercise oversize / disallowed MIME where safe                                             | Policy enforced; URLs usable only for intended upload               | Ken 4/30      |
+| **0.5**        | List, detail, **PATCH**, soft **DELETE**  | T9              | Cursor list, detail with media refs, allowed **PATCH**, **DELETE**                                                | Contract + audit behavior per TDD; soft delete visible in list      | Ken 5/5       |
+| **0.5**        | Playback **sign-read**                    | T7,T9           | `POST` sign-read for allowed `mediaId`; repeat for media outside caller’s scope                                   | Time-limited read URL for allowed; **403** for denied               | Skipped       |
+| **0.5**        | Web list + detail + playback              | T10,T7,T9       | With test JWT: open list → detail → start playback (memory may be created via API or prior seed)                  | Playback works; empty/loading/error states sane                     | Ken 5/11      |
+| **0.5**        | Web cross-client isolation                | T4,T10          | As user A, open user B’s `client_id` route (deep link or tampered segment)                                        | **403** or safe blocked UX; no other tenant data                    | Skipped       |
+| **0.5**        | Guided capture saves one memory           | T11,T12,T14     | Complete photo → meta → record → save; airplane mode mid-save → resume                                            | Exactly one DB row; playback works                                  | Manual / date |
+| **0.5.1-demo** | Workflow chrome + Coming Soon stubs       | T25,T11,T12,T14 | Same golden path as **0.5**; tap each deferred control (multi-photo, library audio, video, tags, transcript cues) | **Coming Soon** surfaces only; finalize still **1 image + 1 audio** | Ken 5/11      |
+| **0.6**        | Multiple photos                           | T15             | Attach 3 images reorder                                                                                           | Ordering persisted                                                  | Manual / date |
+| **0.7**        | Upload audio file                         | T16             | Pick file, save                                                                                                   | Playback matches record path                                        | Manual / date |
+| **0.8**        | Transcription                             | T17,T18         | Record audio; poll until ready                                                                                    | Text appears; failures readable                                     | Manual / date |
+| **0.9**        | Video                                     | T19             | Capture short clip                                                                                                | Playback OK on target devices                                       | Manual / date |
+| **Later**      | **FR-017** / **FR-018** (when unblocked)  | T23,T24         | Role-appropriate comment add/read; denial for wrong role; set visibility → family sees per policy                 | Matches Appendix A + PRD; no PHI in notifications                   | Manual / date |
 
 
 ### 12.6 Mobile automation standard
@@ -679,7 +679,7 @@ PR merges that touch `**apps/web`** capture, list, or detail layouts should keep
 | 1.5     | **§12.5** expanded **0.5** manual matrix (incremental API/web/ops rows + execution note); **§8** manual-scenario bullet aligned; **§12.5** intro clarifies sign-off vs stage gate and **Related tickets** = **all** merged before a row is runnable/sign-offable. |
 | 1.6     | **§12.5** manual procedure checklist + steps for matrix row 3 (upload sign URLs, **T5**/**T6**).                                                                                                                                                                  |
 | 1.7     | **§12.4** **E1–E6** gate tightened: include **T22**, align reviewer scope to **§6.2**, and require explicit CI/coverage + security + release-checklist completion criteria.                                                                                       |
-| 1.8     | **Stage 0.5.1-demo**: Section 4 narrative + §7.1/§7.2/§9; ticket **T25** + Prompt **T25**; §12.4 optional epic inclusion; §12.5 demo matrix row; exec summary delivery note.                                                                                                                                                    |
-| 1.9     | **Stage 0.5.2** (optional): capture route **hi-fi-adjacent** CSS polish toward workflow screenshots; §4 + §7.1/§7.2; no new tickets.                                                                                                                                                                                              |
+| 1.8     | **Stage 0.5.1-demo**: Section 4 narrative + §7.1/§7.2/§9; ticket **T25** + Prompt **T25**; §12.4 optional epic inclusion; §12.5 demo matrix row; exec summary delivery note.                                                                                      |
+| 1.9     | **Stage 0.5.2** (optional): capture route **hi-fi-adjacent** CSS polish toward workflow screenshots; §4 + §7.1/§7.2; no new tickets.                                                                                                                              |
 
 

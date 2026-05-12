@@ -94,6 +94,21 @@ jobs:
             --max-instances=10 \
             --timeout=300
 
+      - name: Apply media bucket CORS
+        env:
+          MEDIA_BUCKET: ${{ secrets.GCP_MEDIA_BUCKET }}
+        run: |
+          set -euo pipefail
+          if [ ! -f infra/gcp/cors.json ]; then
+            echo "::error::infra/gcp/cors.json is missing; cannot apply bucket CORS."
+            exit 1
+          fi
+          # Idempotent: GCS replaces the bucket CORS config on every update. The
+          # deploy SA needs storage.buckets.update on this bucket (granted by
+          # infra/gcp/bootstrap.sh as roles/storage.admin scoped to the bucket).
+          gcloud storage buckets update "gs://${MEDIA_BUCKET}" \
+            --cors-file=infra/gcp/cors.json
+
       - name: Smoke test /health
         run: |
           set -euo pipefail

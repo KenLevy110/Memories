@@ -148,7 +148,7 @@ gcloud iam service-accounts add-iam-policy-binding "${RUNTIME_SA_EMAIL}" \
   --member="serviceAccount:${RUNTIME_SA_EMAIL}" \
   --role="roles/iam.serviceAccountTokenCreator" >/dev/null
 
-echo "Granting deploy SA permissions (Cloud Run admin, Artifact Registry writer, act as runtime SA)…"
+echo "Granting deploy SA permissions (Cloud Run admin, Artifact Registry writer, act as runtime SA, bucket-scoped storage admin for CORS apply)…"
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --member="serviceAccount:${DEPLOY_SA_EMAIL}" \
   --role="roles/run.admin" --condition=None >/dev/null
@@ -158,6 +158,13 @@ gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
 gcloud iam service-accounts add-iam-policy-binding "${RUNTIME_SA_EMAIL}" \
   --member="serviceAccount:${DEPLOY_SA_EMAIL}" \
   --role="roles/iam.serviceAccountUser" >/dev/null
+# Bucket-scoped (not project-wide) so the deploy SA can update bucket CORS from
+# .github/workflows/deploy-api.yml without being a project-wide storage admin.
+# storage.buckets.update is the specific permission needed; roles/storage.admin
+# at bucket scope is the simplest predefined role that includes it.
+gcloud storage buckets add-iam-policy-binding "gs://${MEDIA_BUCKET}" \
+  --member="serviceAccount:${DEPLOY_SA_EMAIL}" \
+  --role="roles/storage.admin" >/dev/null
 
 echo "Granting transcription job SA permissions (GCS read, Cloud SQL client, Secret accessor)…"
 gcloud storage buckets add-iam-policy-binding "gs://${MEDIA_BUCKET}" \

@@ -1,9 +1,6 @@
 [
   {
     "origin": [
-      "https://memories.example.com",
-      "https://memories.web.app",
-      "https://memories.firebaseapp.com",
       "https://legacy-memories-prod.web.app",
       "https://legacy-memories-prod.firebaseapp.com",
       "https://app.theohanaway.com"

@@ -141,3 +141,5 @@ export const memoryDetailResponseSchema = z
   })
   .strict();
 export type MemoryDetailResponse = z.infer<typeof memoryDetailResponseSchema>;
+
+export { extractVitePrefixedKeys, parseDotenvKey, readMemoriesEnvProfileFromEnvContent } from "./dotenvFile.js";

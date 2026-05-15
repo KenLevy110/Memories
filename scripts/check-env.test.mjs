@@ -65,6 +65,26 @@ test("runEnvCheck: missing keys when .env incomplete", () => {
   assert.deepEqual(r.missing, ["B"]);
 });
 
+test("runEnvCheck: ok when .env.local supplies keys missing from .env (standalone profile)", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "check-env-split-"));
+  fs.writeFileSync(path.join(tmp, ".env.example"), "A=1\nB=2\n", "utf8");
+  fs.writeFileSync(path.join(tmp, ".env"), "MEMORIES_ENV_PROFILE=standalone\nA=x\n", "utf8");
+  fs.writeFileSync(path.join(tmp, ".env.local"), "B=y\n", "utf8");
+  const r = runEnvCheck({ root: tmp, strict: false });
+  assert.equal(r.ok, true);
+  assert.equal(r.missing.length, 0);
+});
+
+test("runEnvCheck: dashboard profile ignores .env.local for required keys", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "check-env-dash-"));
+  fs.writeFileSync(path.join(tmp, ".env.example"), "A=1\nB=2\n", "utf8");
+  fs.writeFileSync(path.join(tmp, ".env"), "MEMORIES_ENV_PROFILE=dashboard\nA=x\n", "utf8");
+  fs.writeFileSync(path.join(tmp, ".env.local"), "B=y\n", "utf8");
+  const r = runEnvCheck({ root: tmp, strict: false });
+  assert.equal(r.ok, false);
+  assert.deepEqual(r.missing, ["B"]);
+});
+
 test("runEnvCheck: no .env", () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "check-env-noenv-"));
   fs.writeFileSync(path.join(tmp, ".env.example"), "ONLY=1\n", "utf8");

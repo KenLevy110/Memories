@@ -4,9 +4,11 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "drizzle-kit";
 import { parseIntoClientConfig } from "pg-connection-string";
 import type { ClientConfig } from "pg";
+import { loadMonorepoRootEnv } from "./src/config/loadMonorepoRootEnv.js";
 
 const configDirectory = dirname(fileURLToPath(import.meta.url));
-loadEnv({ path: resolve(configDirectory, "../../.env") });
+const monorepoRoot = resolve(configDirectory, "../..");
+loadMonorepoRootEnv(monorepoRoot);
 loadEnv({ path: resolve(configDirectory, ".env"), override: true });
 
 /** Cloud SQL / hosted Postgres from GitHub Actions often fails TLS verify ("unable to verify the first certificate"). */

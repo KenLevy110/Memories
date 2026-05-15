@@ -12,6 +12,7 @@ $RECYCLE.BIN/
 .env
 .env.*
 !.env.example
+!.env.local.example
 
 # Local Cursor transcript path for scripts/sync-agent-chats.* (see sync-agent-chats.local.env.example)
 scripts/sync-agent-chats.local.env

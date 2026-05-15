@@ -1928,7 +1928,7 @@ function resolveJwtAuthConfig(options?: BuildAppOptions): JwtAuthConfig {
 
   if (missing.length > 0) {
     throw new Error(
-      `Missing JWT auth config: ${missing.join(", ")}. Set these in the repo root .env (see .env.example), ` +
+      `Missing JWT auth config: ${missing.join(", ")}. Set these in the repo root .env (and .env.local when MEMORIES_ENV_PROFILE=standalone), see .env.example, ` +
         `or run a local JWKS helper from the repo root: npm run dev:local-auth — then copy the printed values into .env (README Quick start).`,
     );
   }

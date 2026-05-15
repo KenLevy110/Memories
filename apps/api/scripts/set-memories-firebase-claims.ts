@@ -12,7 +12,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { applicationDefault, initializeApp, getApps } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import { config as loadEnv } from "dotenv";
+import { loadMonorepoRootEnv } from "../src/config/loadMonorepoRootEnv.js";
 import {
   memoriesClientIdFromFirebaseUid,
   memoriesPracticeIdFromFirebaseUid,
@@ -20,7 +20,7 @@ import {
 } from "../src/auth/firebaseClaimUuids.js";
 
 const monorepoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
-loadEnv({ path: path.join(monorepoRoot, ".env") });
+loadMonorepoRootEnv(monorepoRoot);
 
 function parseArgs(argv: string[]): { uid: string; dryRun: boolean } | null {
   const rest = argv.slice(2).filter((a) => a !== "--");

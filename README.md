@@ -29,32 +29,57 @@ npm install
 npm run db:prepare
 ```
 
-Copy `.env.example` to `.env` and adjust (including **JWT_*** — the API will not start without them). Optionally confirm every key from `.env.example` is present in `.env`:
+Copy `.env.example` to `.env` and adjust (including **JWT_*** — the API will not start without them). Tracked **`.env.local.example`** is the **standalone** template; copy it to **`.env.local`** (gitignored) only when you use standalone mode.
+
+`MEMORIES_ENV_PROFILE` in **`.env`** (or exported in your shell before `npm run dev`) selects how **`.env.local`** is used:
+
+| Profile | Meaning |
+| --- | --- |
+| **`dashboard`** (default) | **`.env`** is the full Dashboard integration contract. **`.env.local` is not loaded** by the API, Drizzle, or the Firebase claims script, so a leftover standalone file cannot override ports or JWT. Vite reads `VITE_*` only from **`.env`** (see `apps/web/vite.config.ts`). |
+| **`standalone`** | **`.env.local`** is merged after **`.env`** (overlapping keys win). Use with **`npm run dev:local-auth`** and the values in **`.env.local.example`**. |
+
+Confirm every key from `.env.example` is declared where `npm run check:env` expects: **`.env` only** in dashboard mode, or **`.env` + `.env.local`** in standalone mode.
 
 ```bash
 npm run check:env
 ```
 
-**Local JWT without your real IdP:** `.env.example` defaults match the built-in helper. In **one** terminal run:
+### Local dev modes (summary)
 
-```bash
-npm run dev:local-auth
-```
+| | **Dashboard** (`MEMORIES_ENV_PROFILE=dashboard`) | **Standalone** (`MEMORIES_ENV_PROFILE=standalone`) |
+| --- | --- | --- |
+| **Repo-root `.env`** | Full wiring: API **9090**, web **5174**, JWT → Dashboard **3000** JWKS | Base secrets / `DATABASE_URL`; must set profile to `standalone` |
+| **`.env.local`** | Ignored by loaders (safe to keep a template on disk; do not set conflicting `VITE_*` if you edit Vite behavior) | **Required** for standalone ports/JWT (copy **`.env.local.example`**) |
+| **Memories API** | `http://localhost:9090` | `http://localhost:3000` |
+| **Memories web** | `http://localhost:5174` | `http://localhost:5173` |
+| **JWT / token** | Dashboard `http://localhost:3000/.well-known/jwks.json`, token from Dashboard `/dev/token` | `npm run dev:local-auth` → `http://127.0.0.1:3010/dev/token` |
 
-Leave it running. It listens on **127.0.0.1:3010** only, serves JWKS, and can mint a dev token at `http://127.0.0.1:3010/dev/token`. Then start the stack:
+**Manual switch (mode A):** set **`MEMORIES_ENV_PROFILE`** in **`.env`** to `dashboard` or `standalone`, then start or stop **`npm run dev:local-auth`** as required. **Do not** run `dev:local-auth` while the profile is `dashboard` with Dashboard JWT in **`.env`**.
 
-```bash
-npm run dev
-```
+**Profile flag (mode B):** same variable — no file rename required for the API; Vite follows the profile so Dashboard web config is not overridden by a stray **`.env.local`** `VITE_*` entry.
 
-If the API still exits, confirm `.env` contains **`JWT_ISSUER`**, **`JWT_AUDIENCE`**, and **`JWT_JWKS_URI`** (the helper prints the exact lines). Production uses your platform issuer instead of this helper.
+#### Dashboard + sibling Dashboard repo
+
+1. Keep **`MEMORIES_ENV_PROFILE=dashboard`** (or unset; it defaults to dashboard when the key is absent).
+2. Start **Memories** first (`npm run dev`), then **Dashboard** (`npm run dev` in `../Dashboard`). See [`../Dashboard/README.md`](../Dashboard/README.md) and `npm run smoke:connectivity:local`.
+3. Verify: `GET http://localhost:9090/health` and `GET http://localhost:3000/.well-known/jwks.json`.
+
+#### Standalone Memories only
+
+1. Set **`MEMORIES_ENV_PROFILE=standalone`** in **`.env`**.
+2. Copy **`.env.local.example`** → **`.env.local`** and adjust if needed.
+3. Run **`npm run dev:local-auth`** in one terminal; **`npm run dev`** in another.
+4. Verify: `GET http://localhost:3000/health` → `{"status":"ok",...}`.
+
+`npm run dev:clean` reads repo-root **`.env`** (and **`.env.local`** for `PORT` only when `MEMORIES_ENV_PROFILE=standalone`) and clears the **Memories API** port plus the **Vite** port for the active profile (**5174** dashboard, **5173** standalone). It does **not** stop Dashboard on **3000** unless your `.env` sets `PORT=3000` for the Memories API.
+
+---
+
+If the API exits on startup, confirm **`JWT_ISSUER`**, **`JWT_AUDIENCE`**, and **`JWT_JWKS_URI`** match the active profile (Dashboard vs `dev:local-auth`). Production uses your platform issuer (Firebase or Dashboard), not the local helpers.
 
 To run only one app (for example a second terminal is already running the other), use `npm run dev:api` or `npm run dev:web`.
 
-- Web: default Vite URL (e.g. `http://localhost:5173`)
-- API: `http://localhost:3000` — try `GET /health`
-
-`apps/web` reads `VITE_API_URL` (see `.env.example`) for display and future fetches to the API.
+`apps/web` reads `VITE_API_URL` (see `.env.example`) for display and API fetches.
 
 `npm run db:prepare` is the standard local DB setup path on Windows: it provisions a local PostgreSQL dev cluster if needed, hardens it (`scram-sha-256`, localhost-only), preserves existing passworded DB URLs in `.env`, and runs Drizzle migrations.
 
@@ -65,8 +90,8 @@ To run only one app (for example a second terminal is already running the other)
 | Script | Description |
 | --- | --- |
 | `npm run dev` | Uses `scripts/run-dev.mjs` to clear API/web dev ports, then start API + web in one terminal ([`concurrently`](https://www.npmjs.com/package/concurrently); prefixed logs `api` / `web`) |
-| `npm run dev:clean` | Clear common dev ports before startup (API `3000`, web `5173`) |
-| `npm run dev:local-auth` | Localhost JWKS + `/dev/token` mint (**127.0.0.1** only; run alongside `npm run dev` until you wire a real IdP) |
+| `npm run dev:clean` | Clear Memories dev ports derived from **`.env`** / profile (see above) before `npm run dev` |
+| `npm run dev:local-auth` | Localhost JWKS + `/dev/token` (**127.0.0.1** only). Use only with **`MEMORIES_ENV_PROFILE=standalone`** — do not run against Dashboard JWT in **`.env`**. |
 | `npm run dev:web` | Vite dev server for `apps/web` |
 | `npm run dev:api` | API with hot reload (`tsx watch`) |
 | `npm run db:dev:setup` | Provision/start hardened local PostgreSQL cluster and set DB URLs in `.env` when missing (Windows) |

@@ -29,6 +29,44 @@ export function parseEnvFileKeys(content) {
 }
 
 /**
+ * @param {string} content
+ * @param {string} key
+ * @returns {string | null}
+ */
+export function parseEnvFileValue(content, key) {
+  const needle = `${key}=`;
+  const text = content.startsWith("\ufeff") ? content.slice(1) : content;
+  for (const line of text.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const unexported = trimmed.startsWith("export ") ? trimmed.slice(7).trim() : trimmed;
+    if (!unexported.startsWith(needle)) continue;
+    let value = unexported.slice(needle.length).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    return value.length > 0 ? value : null;
+  }
+  return null;
+}
+
+/**
+ * @param {string} root
+ * @returns {"dashboard" | "standalone"}
+ */
+export function readMemoriesEnvProfileFromRepoDotenv(root) {
+  const envPath = join(root, ".env");
+  if (!existsSync(envPath)) {
+    return "dashboard";
+  }
+  const raw = parseEnvFileValue(readFileSync(envPath, "utf8"), "MEMORIES_ENV_PROFILE")?.trim().toLowerCase() ?? "";
+  return raw === "standalone" ? "standalone" : "dashboard";
+}
+
+/**
  * @param {string} startDir
  * @returns {string | null}
  */
@@ -64,7 +102,9 @@ export function missingEnvKeys(exampleKeys, envKeys) {
  *   skipped?: boolean;
  *   root: string;
  *   envPath: string;
+ *   envLocalPath: string;
  *   examplePath: string;
+ *   profile: "dashboard" | "standalone";
  *   missing: string[];
  *   messages: string[];
  * }}
@@ -73,6 +113,7 @@ export function runEnvCheck(options) {
   const { root, strict } = options;
   const examplePath = join(root, ".env.example");
   const envPath = join(root, ".env");
+  const envLocalPath = join(root, ".env.local");
 
   if (!existsSync(examplePath)) {
     return {
@@ -81,7 +122,9 @@ export function runEnvCheck(options) {
       strict,
       root,
       envPath,
+      envLocalPath,
       examplePath,
+      profile: "dashboard",
       missing: [],
       messages: [`No .env.example at ${root}; skipping env key check.`],
     };
@@ -96,29 +139,47 @@ export function runEnvCheck(options) {
       strict,
       root,
       envPath,
+      envLocalPath,
       examplePath,
+      profile: "dashboard",
       missing: [],
       messages: [".env.example has no KEY= lines; skipping env key check."],
     };
   }
 
   const envExists = existsSync(envPath);
-  const envKeys = envExists
-    ? parseEnvFileKeys(readFileSync(envPath, "utf8"))
-    : new Set();
+  const envLocalExists = existsSync(envLocalPath);
+  const profile = readMemoriesEnvProfileFromRepoDotenv(root);
+
+  /** @type {Set<string>} */
+  const envKeys = new Set();
+  if (envExists) {
+    for (const key of parseEnvFileKeys(readFileSync(envPath, "utf8"))) {
+      envKeys.add(key);
+    }
+  }
+  if (profile === "standalone" && envLocalExists) {
+    for (const key of parseEnvFileKeys(readFileSync(envLocalPath, "utf8"))) {
+      envKeys.add(key);
+    }
+  }
 
   const missing = missingEnvKeys(exampleKeys, envKeys);
   const ok = missing.length === 0;
 
   /** @type {string[]} */
   const messages = [];
-  if (!envExists) {
+  if (!envExists && !envLocalExists) {
     messages.push(
-      `No repo-root .env (expected ${envPath}). Copy from .env.example and fill values. Required keys (${missing.length}): ${missing.join(", ")}`,
+      `No repo-root .env or .env.local (expected ${envPath} and/or ${envLocalPath}). Copy from .env.example and fill values. Required keys (${missing.length}): ${missing.join(", ")}`,
     );
   } else {
     for (const k of missing) {
-      messages.push(`Missing key in .env: ${k}`);
+      const hint =
+        profile === "dashboard"
+          ? `Missing key in .env: ${k} (dashboard profile: unset or MEMORIES_ENV_PROFILE=dashboard — .env.local is ignored for this check)`
+          : `Missing key in .env or .env.local: ${k}`;
+      messages.push(hint);
     }
   }
 
@@ -127,7 +188,9 @@ export function runEnvCheck(options) {
     strict,
     root,
     envPath,
+    envLocalPath,
     examplePath,
+    profile,
     missing,
     messages,
   };
@@ -146,11 +209,15 @@ export function exitCodeForCheck(result) {
     console.warn(`[check-env] ${m}`);
   }
   if (result.ok) {
-    console.log("[check-env] .env declares every key listed in .env.example.");
+    const scope =
+      result.profile === "standalone"
+        ? "repo-root .env plus .env.local (MEMORIES_ENV_PROFILE=standalone)"
+        : "repo-root .env (dashboard profile: .env.local ignored for this check)";
+    console.log(`[check-env] ${scope} — every key listed in .env.example is declared.`);
     return 0;
   }
   console.warn(
-    "[check-env] Add the missing keys to .env (see .env.example). Pass --strict to fail the process.",
+    "[check-env] Add the missing keys (see .env.example). Dashboard: use .env only. Standalone: split across .env and .env.local with MEMORIES_ENV_PROFILE=standalone. Pass --strict to fail the process.",
   );
   return result.strict ? 1 : 0;
 }

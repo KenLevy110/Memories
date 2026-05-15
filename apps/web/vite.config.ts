@@ -13,4 +13,8 @@ const monorepoRoot = path.resolve(
 export default defineConfig({
   plugins: [react()],
   envDir: monorepoRoot,
+  server: {
+    port: 5174,
+    strictPort: true,
+  },
 })

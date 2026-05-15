@@ -50,4 +50,9 @@ if ($placeholderMatches) {
   Write-Host "No common placeholders found."
 }
 
+if (Test-Path "scripts/check-env.test.mjs") {
+  Write-Host "Running check-env script tests..."
+  node --test scripts/check-env.test.mjs
+}
+
 Write-Host "Template verification complete."

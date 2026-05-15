@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copy Cursor Agent *.jsonl transcripts into docs/agent-chats for versioning.
-# Configure via CURSOR_AGENT_TRANSCRIPTS_DIR or scripts/sync-agent-chats.local.env (see sync-agent-chats.local.env.example).
+# Source: CURSOR_AGENT_TRANSCRIPTS_DIR, scripts/sync-agent-chats.local.env, or auto-discovery (resolve-cursor-transcripts-dir.mjs when node is available).
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -15,8 +15,16 @@ if [[ -f "$LOCAL_ENV" ]]; then
 fi
 
 SOURCE="${CURSOR_AGENT_TRANSCRIPTS_DIR:-}"
+RESOLVER="${REPO_ROOT}/scripts/resolve-cursor-transcripts-dir.mjs"
+if [[ (-z "$SOURCE" || ! -d "$SOURCE") ]] && command -v node >/dev/null 2>&1 && [[ -f "$RESOLVER" ]]; then
+  AUTO="$(node "$RESOLVER" "$REPO_ROOT" 2>/dev/null | tr -d '\r' || true)"
+  if [[ -n "$AUTO" && -d "$AUTO" ]]; then
+    SOURCE="$AUTO"
+  fi
+fi
+
 if [[ -z "$SOURCE" || ! -d "$SOURCE" ]]; then
-  echo "sync-agent-chats: set CURSOR_AGENT_TRANSCRIPTS_DIR or copy scripts/sync-agent-chats.local.env.example to scripts/sync-agent-chats.local.env. Skipping."
+  echo "sync-agent-chats: no Cursor transcript dir (set CURSOR_AGENT_TRANSCRIPTS_DIR, scripts/sync-agent-chats.local.env, or open this repo in Cursor for auto-discovery). Skipping."
   exit 0
 fi
 

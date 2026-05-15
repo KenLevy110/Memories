@@ -37,6 +37,7 @@ jobs:
             npm run lint --if-present
             npm run typecheck --if-present
             npm test --if-present
+            npm run test:scripts --if-present
             npm run test:e2e --if-present
           else
             echo "No package.json at repo root; skipping Node checks."

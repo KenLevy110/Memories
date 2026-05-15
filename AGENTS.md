@@ -4,6 +4,10 @@
 
 Repository-wide guidance for AI coding agents in the **Legacy** product monorepo (workspace packages remain `@memories/*`): multimodal capture with **photos**, **recorded voice**, and **transcription** (the Dashboard and other services are separate git repositories). When your layout or quality gates differ from the defaults below, update this file and the matching sections of `docs/` and CI so agents and humans see one story.
 
+## Spec-driven delivery (SDD)
+
+Work is **spec-driven**: align editioned **PRD**, **TDD**, **wireframes**, and **`docs/development-plan-v1.md`** (or the active plan edition) before implementation, with traceability to requirements where the plan uses FR/NFR-style IDs. Record delivery changes in `docs/` (for example implementation log or release notes if you add them). Use **`.cursor/skills/`** for authoring (`product-manager`, `technical-designer`, `development-planner`) and lane skills for implementation. When a plan prompt lists **Skills to read first**, read each listed skill before coding and note which you used in the PR or commit message.
+
 ## Monorepo structure
 
 - `apps/web`: frontend app (React/Vite, Vitest + jsdom).
@@ -36,6 +40,7 @@ These three themes apply to every initiative; specifics live in the rules above,
 ## Commands and validation
 
 - Install dependencies: `npm install` (or the package manager this repo uses).
+- Validate repo-root `.env` keys against `.env.example` (warns only): `npm run check:env` — `npm run test:scripts` includes `check-env` unit tests. Use `npm run check:env:strict` when a missing key should fail the command.
 - Run API + web locally: `npm run dev` (root); or `npm run dev:api` / `npm run dev:web` separately. For local JWT without a platform IdP, run `npm run dev:local-auth` in a second terminal (see root `README.md`).
 - Run all tests: `npm run test`
 - Run API Playwright HTTP checks (e.g. T8 finalize matrix): `npm run test:e2e` (see `apps/api/package.json`; first-time setup: `npm run test:e2e:install -w @memories/api`)
@@ -60,7 +65,7 @@ For new or substantially rewritten docs under `docs/`, read and follow the match
 
 **CI:** **`docs-smoke`** runs **`scripts/check-docs.sh`**; **`checks`** runs optional root **`npm`** scripts when `package.json` exists. The default **CI workflow does not run `db:migrate`** or touch PostgreSQL. **Manual migrations:** [`.github/workflows/migrate.yml`](.github/workflows/migrate.yml) (**workflow_dispatch**) once you have workspaces, `db:migrate`, and secrets—see **`docs/infrastructure.md`** (Database migrations). Optional automatic migrate on `main` is documented there but not enabled by default.
 
-**Agent chat archive:** sync Cursor **`agent-transcripts`** into **`docs/agent-chats/`** via **`scripts/sync-agent-chats.ps1`** or **`scripts/sync-agent-chats.sh`**. Configure **`CURSOR_AGENT_TRANSCRIPTS_DIR`** or copy **`scripts/sync-agent-chats.local.env.example`** to **`scripts/sync-agent-chats.local.env`**. Prefer **`git config core.hooksPath .githooks`** so **pre-commit** (sync + stage **`docs/agent-chats`**) and **pre-push** (fails if the archive is still dirty) keep Cursor transcripts aligned with commits; see **`docs/agent-chats/README.md`**.
+**Agent chat archive:** sync Cursor **`agent-transcripts`** into **`docs/agent-chats/`** via **`scripts/sync-agent-chats.ps1`** or **`scripts/sync-agent-chats.sh`** (auto-discovery via **`scripts/resolve-cursor-transcripts-dir.mjs`** when Node is available, or override **`CURSOR_AGENT_TRANSCRIPTS_DIR`** / **`scripts/sync-agent-chats.local.env`**). **`npm install`** runs **`prepare`** to set **`git config core.hooksPath .githooks`** locally (when not in CI); **pre-commit** syncs and stages **`docs/agent-chats`**, and **pre-push** fails if the archive is still dirty; see **`docs/agent-chats/README.md`**.
 
 ## Skill files (`.cursor/skills/`)
 

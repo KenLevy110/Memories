@@ -1,13 +1,17 @@
 param(
     [switch]$Strict,
     [string]$SourceDir = "",
-    [string]$DestinationDir = "docs\agent-chats"
+    [string]$DestinationDir = ""
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $ScriptDir = $PSScriptRoot
+$RepoRoot = (Resolve-Path (Join-Path $ScriptDir "..")).Path
+if (-not $DestinationDir) {
+    $DestinationDir = Join-Path $RepoRoot "docs/agent-chats"
+}
 $LocalEnv = Join-Path $ScriptDir "sync-agent-chats.local.env"
 if (Test-Path -Path $LocalEnv) {
     Get-Content -Path $LocalEnv | ForEach-Object {
@@ -28,7 +32,17 @@ if (-not $SourceDir) {
 }
 
 if (-not $SourceDir) {
-    $msg = "Set CURSOR_AGENT_TRANSCRIPTS_DIR or copy scripts/sync-agent-chats.local.env.example to scripts/sync-agent-chats.local.env"
+    $resolver = Join-Path $ScriptDir "resolve-cursor-transcripts-dir.mjs"
+    if ((Test-Path -LiteralPath $resolver) -and (Get-Command node -ErrorAction SilentlyContinue)) {
+        $auto = (& node $resolver $RepoRoot 2>$null | Out-String).Trim()
+        if ($auto -and (Test-Path -LiteralPath $auto -PathType Container)) {
+            $SourceDir = $auto
+        }
+    }
+}
+
+if (-not $SourceDir) {
+    $msg = "No Cursor transcript dir (set CURSOR_AGENT_TRANSCRIPTS_DIR, scripts/sync-agent-chats.local.env, or open this repo in Cursor for auto-discovery). Skipping."
     if ($Strict) {
         throw $msg
     }

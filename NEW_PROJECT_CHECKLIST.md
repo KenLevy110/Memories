@@ -20,6 +20,7 @@ Use this checklist when bootstrapping a new repo from Ohana `cursor-template`, o
 
 - [ ] Create `.env.example` for the new project
 - [ ] Install dependencies
+- [ ] After creating `.env` from `.env.example`, run **`npm run check:env`** (or **`node scripts/check-env.mjs`**) to warn when `.env` is missing keys; use **`npm run check:env:strict`** when missing keys must fail a preflight
 - [ ] Verify scripts (`lint`, `test`, `build`) are present
 
 ## 4) Validate quality baseline
@@ -32,7 +33,7 @@ Use this checklist when bootstrapping a new repo from Ohana `cursor-template`, o
 
 ## 5) Prepare delivery workflow
 
-- [ ] Run `git config core.hooksPath .githooks` and set `CURSOR_AGENT_TRANSCRIPTS_DIR` if needed (`docs/agent-chats/README.md`)
+- [ ] Run `npm install` (sets `core.hooksPath` via `prepare` when not in CI) or `git config core.hooksPath .githooks`; transcript sync **auto-discovers** Cursor paths when Node is available—set **`CURSOR_AGENT_TRANSCRIPTS_DIR`** or **`scripts/sync-agent-chats.local.env`** only if needed (`docs/agent-chats/README.md`)
 - [ ] Configure CI checks for lint, tests, and build
 - [ ] Configure security checks in `.github/workflows/security.yml`
 - [ ] Require status checks: **`docs-smoke`**, **`checks`** (CI), and Security jobs you use (**`secrets-scan`**, **`npm-audit`**, PR-only **`dependency-review`**)

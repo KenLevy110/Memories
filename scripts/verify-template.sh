@@ -43,4 +43,9 @@ else
   echo "No common placeholders found."
 fi
 
+if [[ -f scripts/check-env.test.mjs ]]; then
+  echo "Running check-env script tests..."
+  node --test scripts/check-env.test.mjs
+fi
+
 echo "Template verification complete."

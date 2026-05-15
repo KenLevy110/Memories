@@ -2,6 +2,10 @@
 
 Product (**Legacy**): capture and preserve what matters with **photos**, **recorded voice**, and **transcription** (to be implemented). The **Dashboard** and other platform apps live in separate repositories; this repo ships the Legacy vertical (**npm** workspaces `@memories/*`, Node + TypeScript API, React + TypeScript web, shared contracts).
 
+## Spec-driven delivery (SDD)
+
+Delivery is **spec-driven**: editioned product and technical docs in `docs/` (`product-requirements-v1.md`, `technical-design-v1.md`, `development-plan-v1.md`, wireframes) sequence work before deep implementation; agents follow `AGENTS.md` and **`.cursor/skills/`** for authoring and lane implementation.
+
 ## Layout
 
 | Path | Role |
@@ -25,7 +29,11 @@ npm install
 npm run db:prepare
 ```
 
-Copy `.env.example` to `.env` and adjust (including **JWT_*** — the API will not start without them).
+Copy `.env.example` to `.env` and adjust (including **JWT_*** — the API will not start without them). Optionally confirm every key from `.env.example` is present in `.env`:
+
+```bash
+npm run check:env
+```
 
 **Local JWT without your real IdP:** `.env.example` defaults match the built-in helper. In **one** terminal run:
 
@@ -77,7 +85,7 @@ To run only one app (for example a second terminal is already running the other)
 - Run `.\scripts\verify-template.ps1` after renames; use `-Strict` when cleaning placeholders (e.g. `@your-org` in `.github/CODEOWNERS`).
 - CI includes **`docs-smoke`** (`scripts/check-docs.sh`) plus **`checks`** (lint, typecheck, unit tests, and `npm run test:e2e` when present). In GitHub branch protection, require **`docs-smoke`** and **`checks`**, and the Security jobs you use (see `CONTRIBUTING.md`).
 - DB migrates: `.github/workflows/migrate.yml` supports manual production runs and optional auto-on-`main` mode controlled by `ENABLE_AUTO_PROD_MIGRATE`; see `docs/infrastructure.md` (section 3).
-- Git hooks (agent transcript archive): `git config core.hooksPath .githooks`. Set your Cursor transcript directory via `scripts/sync-agent-chats.local.env` (copy from `scripts/sync-agent-chats.local.env.example`) or `CURSOR_AGENT_TRANSCRIPTS_DIR`; see `docs/agent-chats/README.md`.
+- Git hooks (agent transcript archive): **`npm install`** runs **`prepare`** to set **`core.hooksPath`** to **`.githooks`** when not in CI; override transcript path only if needed via **`scripts/sync-agent-chats.local.env`** or **`CURSOR_AGENT_TRANSCRIPTS_DIR`** (see **`docs/agent-chats/README.md`** — auto-discovery covers typical Cursor setups).
 
 ## License
 

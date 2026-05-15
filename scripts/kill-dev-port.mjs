@@ -66,6 +66,11 @@ function getWindowsPids(port) {
   return [...pids];
 }
 
+function sanitizePids(pids) {
+  const denied = new Set(["0", "4"]);
+  return pids.filter((pid) => /^\d+$/.test(pid) && !denied.has(pid));
+}
+
 function getUnixPids(port) {
   try {
     const output = run("lsof", ["-ti", `tcp:${port}`, "-sTCP:LISTEN"]);
@@ -89,22 +94,43 @@ function killUnixPid(pid) {
 function main() {
   const port = parsePort(process.argv[2] ?? "3000");
   const isWindows = process.platform === "win32";
-  const pids = isWindows ? getWindowsPids(port) : getUnixPids(port);
+  const discoveredPids = isWindows ? getWindowsPids(port) : getUnixPids(port);
+  const pids = isWindows ? sanitizePids(discoveredPids) : discoveredPids;
+  const skipped = discoveredPids.filter((pid) => !pids.includes(pid));
 
   if (pids.length === 0) {
-    console.log(`Port ${port} is already clear.`);
+    if (skipped.length > 0) {
+      console.log(`Port ${port}: skipped protected/invalid PID(s): ${skipped.join(", ")}`);
+    } else {
+      console.log(`Port ${port} is already clear.`);
+    }
     return;
   }
 
+  const killed = [];
+  const failed = [];
   for (const pid of pids) {
-    if (isWindows) {
-      killWindowsPid(pid);
-    } else {
-      killUnixPid(pid);
+    try {
+      if (isWindows) {
+        killWindowsPid(pid);
+      } else {
+        killUnixPid(pid);
+      }
+      killed.push(pid);
+    } catch {
+      failed.push(pid);
     }
   }
 
-  console.log(`Cleared port ${port}; stopped PID(s): ${pids.join(", ")}`);
+  if (killed.length > 0) {
+    console.log(`Cleared port ${port}; stopped PID(s): ${killed.join(", ")}`);
+  }
+  if (failed.length > 0) {
+    console.log(`Port ${port}: failed to stop PID(s): ${failed.join(", ")}`);
+  }
+  if (skipped.length > 0) {
+    console.log(`Port ${port}: skipped protected/invalid PID(s): ${skipped.join(", ")}`);
+  }
 }
 
 main();

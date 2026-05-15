@@ -23,10 +23,10 @@ Transcripts can include prompts, code snippets, environment details, and operati
 
 ## Git hooks (agent transcripts)
 
-- From the repo root, run: `git config core.hooksPath .githooks`
+- **`npm install`** at the repo root runs **`prepare`**, which sets **`git config core.hooksPath .githooks`** when you are in a git work tree and not in CI (see **`scripts/setup-git-hooks.mjs`**). You can also run **`scripts/setup-git-hooks.ps1`**, **`node scripts/setup-git-hooks.mjs`**, or set hooks path manually once.
 - **pre-commit** syncs transcripts (bash script preferred; PowerShell fallback) and **stages** **`docs/agent-chats`** when files change.
 - **pre-push** runs sync again and **blocks** the push if **`docs/agent-chats/`** is still dirty—amend or commit, or use **`SKIP_AGENT_CHAT_SYNC=1`** only in exceptional cases (note in the PR).
-- Set **`CURSOR_AGENT_TRANSCRIPTS_DIR`** or copy **`scripts/sync-agent-chats.local.env.example`** → **`scripts/sync-agent-chats.local.env`** (see **`docs/agent-chats/README.md`**).
+- Transcript source is **auto-discovered** when Node is available (see **`docs/agent-chats/README.md`**). Override with **`CURSOR_AGENT_TRANSCRIPTS_DIR`** or **`scripts/sync-agent-chats.local.env`** only if needed.
 - Locally verify doc layout anytime: **`scripts/check-docs.sh`** (Git Bash / Linux / macOS) or **`scripts/check-docs.ps1`** (Windows).
 
 ## Security minimum baseline

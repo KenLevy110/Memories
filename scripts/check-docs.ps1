@@ -18,6 +18,10 @@ if (!(Test-Path ".cursor/rules/docs-governance.mdc")) { Fail ".cursor/rules/docs
 if (!(Test-Path "docs/agent-chats/README.md")) { Fail "docs/agent-chats/README.md missing" }
 if (!(Test-Path "scripts/sync-agent-chats.sh")) { Fail "scripts/sync-agent-chats.sh missing" }
 if (!(Test-Path "scripts/sync-agent-chats.ps1")) { Fail "scripts/sync-agent-chats.ps1 missing" }
+if (!(Test-Path "scripts/resolve-cursor-transcripts-dir.mjs")) { Fail "scripts/resolve-cursor-transcripts-dir.mjs missing" }
+if (!(Test-Path "scripts/resolve-cursor-transcripts-dir.test.mjs")) { Fail "scripts/resolve-cursor-transcripts-dir.test.mjs missing" }
+if (!(Test-Path "scripts/setup-git-hooks.mjs")) { Fail "scripts/setup-git-hooks.mjs missing" }
+if (!(Test-Path "scripts/setup-git-hooks.ps1")) { Fail "scripts/setup-git-hooks.ps1 missing" }
 if (!(Test-Path "scripts/check-docs.sh")) { Fail "scripts/check-docs.sh missing" }
 if (!(Test-Path "scripts/sync-agent-chats.local.env.example")) { Fail "scripts/sync-agent-chats.local.env.example missing" }
 if (!(Test-Path ".github/workflows/migrate.yml")) { Fail ".github/workflows/migrate.yml missing" }

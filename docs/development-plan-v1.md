@@ -39,7 +39,7 @@ Per [documentation governance](../.cursor/rules/docs-governance.mdc), derived do
 | **Implementation log**          | [implementation-log.md](implementation-log.md)                                  |
 | **Runbook**                     | — (add `docs/runbook.md` when operator steps and on-call playbooks are defined) |
 | **ADR index**                   | [adr/README.md](adr/README.md)                                                  |
-| **Baseline / superseded plans** | — (link prior `development-plan-v*.md` here when superseded)                    |
+| **Baseline / superseded plans** | **Slice plan:** [development-plan-v1.1.md](development-plan-v1.1.md) (Dashboard launch integration — does not supersede this v1 plan) |
 | **Execution status** (optional) | —                                                                               |
 
 

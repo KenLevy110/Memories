@@ -5,10 +5,10 @@
 | Field | Value |
 | --- | --- |
 | **Status** | Approved |
-| **Last updated** | 2026-05-07 |
+| **Last updated** | 2026-05-15 |
 | **Service** | Memories (photos, voice, transcription) |
 | **Sign-off** | Ken Levy (project lead) |
-| **Related** | [product-requirements-v1.md](product-requirements-v1.md); [technical-design-v1.md](technical-design-v1.md); [design-wireframe-v1.md](design-wireframe-v1.md); [memories-user-workflow-v1.md](memories-user-workflow-v1.md); [development-plan-v1.md](development-plan-v1.md); [infrastructure.md](infrastructure.md); [adr/ADR-20260430-memories-platform-boundary-auth-routing.md](adr/ADR-20260430-memories-platform-boundary-auth-routing.md); [Prototype Backend Engineering Handoff.md](Prototype%20Backend%20Engineering%20Handoff.md) |
+| **Related** | [product-requirements-v1.md](product-requirements-v1.md); [product-requirements-v1.1.md](product-requirements-v1.1.md) (Dashboard launch — Draft); [technical-design-v1.md](technical-design-v1.md); [design-wireframe-v1.md](design-wireframe-v1.md); [memories-user-workflow-v1.md](memories-user-workflow-v1.md); [development-plan-v1.md](development-plan-v1.md); [development-plan-v1.1.md](development-plan-v1.1.md); [infrastructure.md](infrastructure.md); [adr/ADR-20260430-memories-platform-boundary-auth-routing.md](adr/ADR-20260430-memories-platform-boundary-auth-routing.md); [Prototype Backend Engineering Handoff.md](Prototype%20Backend%20Engineering%20Handoff.md); cross-repo contract [../Dashboard/docs/memories-integration-contract-v1.1.md](../Dashboard/docs/memories-integration-contract-v1.1.md) |
 
 ## Locked decisions (this repo)
 

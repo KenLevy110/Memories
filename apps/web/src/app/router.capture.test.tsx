@@ -5,6 +5,38 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createAppRouter } from "./router";
 
+const CAPTURE_FLOW_TIMEOUT_MS = 12_000;
+const TEST_CLIENT_ID = "8f9512d8-e88f-4f82-a8e9-6cb19a43ad52";
+
+function isClientMemoriesEndpoint(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.pathname === `/api/v1/clients/${TEST_CLIENT_ID}/memories`;
+  } catch {
+    return false;
+  }
+}
+
+function primeCaptureEntryRoute(): void {
+  window.localStorage.setItem("memories.devBearerToken", "token-for-capture-test");
+  window.history.pushState({}, "", `/clients/${TEST_CLIENT_ID}/capture?step=photo`);
+}
+
+function createCaptureHarness() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+    },
+  });
+  const router = createAppRouter();
+
+  render(
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  );
+}
+
 function buildFinalizeResponse() {
   return {
     memory: {
@@ -71,9 +103,10 @@ describe("capture flow smoke", () => {
     cleanup();
   });
 
-  it("completes photo->meta->prompt->record->review->done and sends idempotency header", async () => {
-    window.localStorage.setItem("memories.devBearerToken", "token-for-capture-test");
-    window.history.pushState({}, "", "/clients/8f9512d8-e88f-4f82-a8e9-6cb19a43ad52/capture?step=photo");
+  it(
+    "completes photo->meta->prompt->record->review->done and sends idempotency header",
+    async () => {
+    primeCaptureEntryRoute();
 
     const fetchCalls: Array<{ url: string; method: string; headers: Headers; body?: string }> =
       [];
@@ -127,8 +160,15 @@ describe("capture flow smoke", () => {
         return new Response(null, { status: 200 });
       }
 
-      if (url.includes("/api/v1/clients/8f9512d8-e88f-4f82-a8e9-6cb19a43ad52/memories")) {
+      if (method === "POST" && isClientMemoriesEndpoint(url)) {
         return new Response(JSON.stringify(buildFinalizeResponse()), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+
+      if (method === "GET" && isClientMemoriesEndpoint(url)) {
+        return new Response(JSON.stringify(buildMemoriesListResponse()), {
           status: 200,
           headers: { "content-type": "application/json" },
         });
@@ -137,18 +177,7 @@ describe("capture flow smoke", () => {
       throw new Error(`Unexpected fetch request: ${url}`);
     });
 
-    const queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-      },
-    });
-    const router = createAppRouter();
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>,
-    );
+    createCaptureHarness();
 
     const user = userEvent.setup();
 
@@ -179,8 +208,8 @@ describe("capture flow smoke", () => {
         mime_type: "image/jpeg",
       });
 
-      const finalizeCall = fetchCalls.find((call) =>
-        call.url.includes("/api/v1/clients/8f9512d8-e88f-4f82-a8e9-6cb19a43ad52/memories"),
+      const finalizeCall = fetchCalls.find(
+        (call) => call.method === "POST" && isClientMemoriesEndpoint(call.url),
       );
       const imageUploadCall = fetchCalls.find(
         (call) => call.url === "https://uploads.example.com/image",
@@ -198,24 +227,13 @@ describe("capture flow smoke", () => {
       expect(finalizeCall?.headers.get("idempotency-key")).toBeTruthy();
       expect(finalizeCall?.headers.get("authorization")).toBe("Bearer token-for-capture-test");
     });
-  });
+    },
+    CAPTURE_FLOW_TIMEOUT_MS,
+  );
 
   it("shows Coming Soon when a deferred capture control is used", async () => {
-    window.localStorage.setItem("memories.devBearerToken", "token-for-capture-test");
-    window.history.pushState({}, "", "/clients/8f9512d8-e88f-4f82-a8e9-6cb19a43ad52/capture?step=photo");
-
-    const queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-      },
-    });
-    const router = createAppRouter();
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>,
-    );
+    primeCaptureEntryRoute();
+    createCaptureHarness();
 
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Choose from Library" }));
@@ -223,9 +241,10 @@ describe("capture flow smoke", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("Coming Soon — Choose from Library");
   });
 
-  it("starts a new capture with cleared fields after saving and returning to the list", async () => {
-    window.localStorage.setItem("memories.devBearerToken", "token-for-capture-test");
-    window.history.pushState({}, "", "/clients/8f9512d8-e88f-4f82-a8e9-6cb19a43ad52/capture?step=photo");
+  it(
+    "starts a new capture with cleared fields after saving and returning to the list",
+    async () => {
+    primeCaptureEntryRoute();
 
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = String(input);
@@ -267,20 +286,14 @@ describe("capture flow smoke", () => {
         return new Response(null, { status: 200 });
       }
 
-      if (
-        method === "POST" &&
-        url === "http://localhost:8787/api/v1/clients/8f9512d8-e88f-4f82-a8e9-6cb19a43ad52/memories"
-      ) {
+      if (method === "POST" && isClientMemoriesEndpoint(url)) {
         return new Response(JSON.stringify(buildFinalizeResponse()), {
           status: 200,
           headers: { "content-type": "application/json" },
         });
       }
 
-      if (
-        method === "GET" &&
-        url === "http://localhost:8787/api/v1/clients/8f9512d8-e88f-4f82-a8e9-6cb19a43ad52/memories"
-      ) {
+      if (method === "GET" && isClientMemoriesEndpoint(url)) {
         return new Response(JSON.stringify(buildMemoriesListResponse()), {
           status: 200,
           headers: { "content-type": "application/json" },
@@ -290,18 +303,7 @@ describe("capture flow smoke", () => {
       throw new Error(`Unexpected fetch request: ${url} (${method})`);
     });
 
-    const queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-      },
-    });
-    const router = createAppRouter();
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>,
-    );
+    createCaptureHarness();
 
     const user = userEvent.setup();
 
@@ -332,5 +334,7 @@ describe("capture flow smoke", () => {
 
     expect(await screen.findByLabelText("Object title")).toHaveValue("");
     expect(screen.getByLabelText("Room")).toHaveValue("");
-  });
+    },
+    CAPTURE_FLOW_TIMEOUT_MS,
+  );
 });

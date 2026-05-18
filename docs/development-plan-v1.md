@@ -14,9 +14,9 @@ For template structure and section intent, see [development-plan-template.md](te
 | Field             | Value                                                                                                                                    |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | **Title**         | Memories — development plan                                                                                                              |
-| **Version**       | 1.9                                                                                                                                      |
+| **Version**       | 1.10                                                                                                                                     |
 | **Author**        | Ken Levy                                                                                                                                 |
-| **Date**          | 2026-05-07                                                                                                                               |
+| **Date**          | 2026-05-18                                                                                                                               |
 | **Status**        | Draft                                                                                                                                    |
 | **Release**       | Staged: **0.5** (first prod slice) → **0.5.1-demo** (optional UX demo) → **0.5.2** (capture visual polish) → **0.6–1.0** (see Section 7) |
 | **Template used** | [docs/templates/development-plan-template.md](templates/development-plan-template.md)                                                    |
@@ -620,7 +620,7 @@ Workspaces use `**@memories/web`** and `**@memories/api`** (see root `package.js
 
 | Epic      | Includes tickets                                           | Primary reviewers                                       | Epic done gate                                                                                                                                       |
 | --------- | ---------------------------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **E1–E6** | T1–T14, T22 (+ optional **T25** for **0.5.1-demo** builds) | Sr/Sec/QA per §6.2 reviewer column; code-quality always | Stage **0.5** rows in §12.5 are signed off **and** T22 release checklist complete; CI green with coverage floors; authz/audit/no-PHI-log checks pass |
+| **E1–E6** | T1–T14, T22 (+ optional **T25** for **0.5.1-demo** builds) | Sr/Sec/QA per §6.2 reviewer column; code-quality always | Stage **0.5** rows in §12.5 are signed off with dated environment evidence **and** T22 release checklist complete; CI green (`npm run lint`, `npm run typecheck`, `npm run test`) with coverage floors; authz, sign URL scope/expiry, audit, and no-PHI-log checks pass; unresolved defects are triaged with explicit residual-risk notes |
 | **E7**    | T15                                                        | Sr, QA                                                  | Multi-image UX approved                                                                                                                              |
 | **E8**    | T16                                                        | QA                                                      | Upload + record both work                                                                                                                            |
 | **E9**    | T17,T18                                                    | Sr, QA, Sec (vendor)                                    | Transcript states correct                                                                                                                            |
@@ -681,5 +681,6 @@ PR merges that touch `**apps/web`** capture, list, or detail layouts should keep
 | 1.7     | **§12.4** **E1–E6** gate tightened: include **T22**, align reviewer scope to **§6.2**, and require explicit CI/coverage + security + release-checklist completion criteria.                                                                                       |
 | 1.8     | **Stage 0.5.1-demo**: Section 4 narrative + §7.1/§7.2/§9; ticket **T25** + Prompt **T25**; §12.4 optional epic inclusion; §12.5 demo matrix row; exec summary delivery note.                                                                                      |
 | 1.9     | **Stage 0.5.2** (optional): capture route **hi-fi-adjacent** CSS polish toward workflow screenshots; §4 + §7.1/§7.2; no new tickets.                                                                                                                              |
+| 1.10    | Tighten **§12.4 E1–E6** done gate: require dated matrix evidence, explicit CI command set, sign URL scope/expiry checks, and residual-risk notes for triaged unresolved defects.                                                                                      |
 
 
